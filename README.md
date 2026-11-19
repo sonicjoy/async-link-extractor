@@ -108,7 +108,7 @@ Everything runs as tasks on one event loop. The work is almost all waiting on th
 
 **Producers.** `--concurrency N` starts N worker tasks that share one iterator of jobs. `next()` never awaits, so no job is taken twice, and the task count stays at N however long the list is. Each worker fetches, then hands the result to the overflow policy.
 
-**Fetching** ([`fetch.py`](src/linkx/fetch.py)). One shared `httpx.AsyncClient`. An attempt is: wait for the host's slot (`--per-host-delay`), then send the request, follow up to 9 redirects and stream the body under one `asyncio.timeout`. httpx's own timeouts apply per phase (connect, read, ...), so they do not bound an attempt on their own. The body is counted as it streams and the attempt stops past `--max-bytes`. `linkx` asks only for gzip or deflate and decompresses them itself in bounded steps (`zlib` with `max_length`), because httpx inflates a whole network chunk at once: 64 KB of gzip can become 64 MB before any cap sees it. A 50 MB gzip bomb is refused while holding under 5 MB (a test checks this). Only `text/html` and `application/xhtml+xml` are accepted. Timeouts, connection errors, 5xx and 429 are retried with full-jitter exponential backoff (a random wait up to 0.5 s × 2^k, capped at 5 s). `fetch()` turns every failure into a result with an error kind and never raises `Exception`.
+**Fetching** ([`fetch.py`](src/linkx/fetch.py)). One shared `httpx.AsyncClient`. An attempt is: wait for the host's slot (`--per-host-delay`), then send the request, follow up to 9 redirects (closing each 3xx without reading its body, which httpx would otherwise read in full, outside the cap) and stream the body under one `asyncio.timeout`. httpx's own timeouts apply per phase (connect, read, ...), so they do not bound an attempt on their own. The body is counted as it streams and the attempt stops past `--max-bytes`. `linkx` asks only for gzip or deflate and decompresses them itself in bounded steps (`zlib` with `max_length`), because httpx inflates a whole network chunk at once: 64 KB of gzip can become 64 MB before any cap sees it. A 50 MB gzip bomb is refused while holding under 5 MB (a test checks this). Only `text/html` and `application/xhtml+xml` are accepted. Timeouts, connection errors, 5xx and 429 are retried with full-jitter exponential backoff (a random wait up to 0.5 s × 2^k, capped at 5 s). `fetch()` turns every failure into a result with an error kind and never raises `Exception`.
 
 **Queue and overflow** ([`overflow.py`](src/linkx/overflow.py)). A plain `asyncio.Queue(maxsize)`. A policy is one function that puts an item and returns what it evicted, if anything. `drop-oldest` checks, evicts and puts with no `await` in between, so on one event loop the three steps cannot interleave with another worker's, without a lock. The worker then writes a `dropped` record for the evicted result straight away.
 
@@ -222,7 +222,7 @@ URL scheduler --> [urls topic, keyed by host] --> fetchers --> [raw-html topic, 
 
 ```bash
 uv sync
-uv run pytest --cov            # 229 tests, about 6 s
+uv run pytest --cov            # 243 tests, about 7 s
 uv run ruff check && uv run ruff format --check
 uv run mypy                    # strict
 uv run python scripts/demo_backpressure.py

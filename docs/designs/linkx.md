@@ -108,7 +108,7 @@ The fetcher first validates the URL: it must parse, have scheme `http` or `https
 One attempt is:
 
 1.  `await limiter.wait(host)`, which enforces `--per-host-delay` and is outside the timeout.
-2.  Under `asyncio.timeout(--timeout)`: send the request, let httpx follow up to 9 redirects, and stream the body. httpx's own timeout is set to the same value.
+2.  Under `asyncio.timeout(--timeout)`: send the request, follow up to 9 redirects, and stream the body. httpx's own timeout is set to the same value. `linkx` follows redirects itself, using the next request httpx builds from the `Location` header, and closes each 3xx without reading its body: when httpx follows redirects it reads every 3xx body in full, outside the size cap.
 
 A request hook on the shared `httpx.AsyncClient` runs before the first request and before every redirect hop (confirmed by experiment). It applies the same validation to each redirect target and, unless `--allow-private` is set, raises `blocked_address` unless every address the host resolves to is public: `ipaddress.is_global`, not multicast, not in 192.0.0.0/24 or 192.88.99.0/24, and an IPv6 address that embeds an IPv4 one (mapped, NAT64, IPv4-compatible) is judged by that IPv4 address. Because httpx resolves the name again to connect, a response hook also checks the address actually connected to, on every hop and before the body is read; this stops DNS rebinding from reading an internal response, although the request itself has been sent. The client ignores proxy settings from the environment so that the connected address is the real server. Redirect hops are not rate limited.
 

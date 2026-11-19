@@ -103,8 +103,9 @@ def make_client(
         # No proxies from the environment: the address checks must see the real server,
         # and a proxy would resolve names on its own.
         trust_env=False,
-        follow_redirects=True,
-        max_redirects=settings.max_redirects,
+        # Fetcher follows redirects itself: httpx would read every 3xx body in full,
+        # outside the size cap.
+        follow_redirects=False,
         timeout=settings.timeout,
         limits=httpx.Limits(
             max_connections=settings.concurrency,
@@ -120,11 +121,12 @@ def make_client(
 
 
 def _decode(body: bytes, charset: str | None) -> str:
-    """Decode with the declared charset; fall back to UTF-8 if it is unknown or not a text
-    encoding (bytes.decode refuses base64, rot13 and the like with LookupError)."""
+    """Decode with the declared charset; fall back to UTF-8 if it is unknown, not a text
+    encoding (LookupError: base64, rot13) or cannot decode at all (ValueError, which
+    includes UnicodeError: idna, undefined). The charset is the server's choice."""
     try:
         return body.decode(charset or "utf-8", errors="replace")
-    except LookupError:
+    except (LookupError, ValueError):
         return body.decode("utf-8", errors="replace")
 
 
@@ -248,21 +250,34 @@ class Fetcher:
         timeout = self._settings.timeout
         try:
             async with asyncio.timeout(timeout):
-                async with self._client.stream("GET", url) as response:
-                    return await self._read_page(response)
+                return await self._follow(self._client.build_request("GET", url))
         except TimeoutError:
             raise FetchFailure(
                 ErrorKind.TIMEOUT, f"no complete response within {timeout}s", retryable=True
             ) from None
         except httpx.TimeoutException as exc:
             raise FetchFailure(ErrorKind.TIMEOUT, _describe(exc), retryable=True) from None
-        except httpx.TooManyRedirects:
-            raise FetchFailure(
-                ErrorKind.TOO_MANY_REDIRECTS,
-                f"more than {self._settings.max_redirects} redirects",
-            ) from None
         except httpx.TransportError as exc:
             raise FetchFailure(ErrorKind.CONNECT, _describe(exc), retryable=True) from None
+
+    async def _follow(self, request: httpx.Request) -> tuple[str, int, str]:
+        """Send the request and follow up to `max_redirects` redirects.
+
+        Each 3xx is closed without reading its body: the only body ever read is the final
+        one, through the size cap. httpx builds the next request (`next_request`),
+        resolving a relative Location; an unparseable one raises RemoteProtocolError.
+        """
+        for _ in range(self._settings.max_redirects + 1):
+            response = await self._client.send(request, stream=True)
+            try:
+                if response.next_request is None:
+                    return await self._read_page(response)
+                request = response.next_request
+            finally:
+                await response.aclose()
+        raise FetchFailure(
+            ErrorKind.TOO_MANY_REDIRECTS, f"more than {self._settings.max_redirects} redirects"
+        )
 
     async def _read_page(self, response: httpx.Response) -> tuple[str, int, str]:
         final_url = str(response.url)
