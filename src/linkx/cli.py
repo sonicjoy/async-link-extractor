@@ -35,9 +35,10 @@ DEFAULTS = Settings()
 
 
 def _bounded[T: (int, float)](
-    convert: Callable[[str], T], *, minimum: T, inclusive: bool = True
+    convert: Callable[[str], T], *, minimum: T, maximum: T, inclusive: bool = True
 ) -> Callable[[str], T]:
-    """Build an argparse type that converts a value and enforces a lower bound."""
+    """Build an argparse type that converts a value and enforces its bounds. The upper
+    bounds are far above any real use; they stop a typo from hanging or exhausting memory."""
 
     def parse(text: str) -> T:
         try:
@@ -51,6 +52,8 @@ def _bounded[T: (int, float)](
         if value < minimum or (not inclusive and value == minimum):
             relation = "at least" if inclusive else "above"
             raise argparse.ArgumentTypeError(f"must be {relation} {minimum}, got {text}")
+        if value > maximum:
+            raise argparse.ArgumentTypeError(f"must be at most {maximum}, got {text}")
         return value
 
     return parse
@@ -73,19 +76,19 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--concurrency",
-        type=_bounded(int, minimum=1),
+        type=_bounded(int, minimum=1, maximum=1000),
         default=DEFAULTS.concurrency,
         help="fetch workers",
     )
     parser.add_argument(
         "--consumers",
-        type=_bounded(int, minimum=1),
+        type=_bounded(int, minimum=1, maximum=64),
         default=DEFAULTS.consumers,
         help="parsing consumers",
     )
     parser.add_argument(
         "--queue-max",
-        type=_bounded(int, minimum=1),
+        type=_bounded(int, minimum=1, maximum=1_000_000),
         default=DEFAULTS.queue_max,
         help="queue capacity",
     )
@@ -97,25 +100,25 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--timeout",
-        type=_bounded(float, minimum=0.0, inclusive=False),
+        type=_bounded(float, minimum=0.0, maximum=3600.0, inclusive=False),
         default=DEFAULTS.timeout,
         help="seconds per fetch attempt",
     )
     parser.add_argument(
         "--retries",
-        type=_bounded(int, minimum=0),
+        type=_bounded(int, minimum=0, maximum=10),
         default=DEFAULTS.retries,
         help="extra attempts per URL",
     )
     parser.add_argument(
         "--max-bytes",
-        type=_bounded(int, minimum=1),
+        type=_bounded(int, minimum=1, maximum=1_000_000_000),
         default=DEFAULTS.max_bytes,
         help="largest body accepted",
     )
     parser.add_argument(
         "--per-host-delay",
-        type=_bounded(float, minimum=0.0),
+        type=_bounded(float, minimum=0.0, maximum=3600.0),
         default=DEFAULTS.per_host_delay,
         help="minimum seconds between requests to one host",
     )
