@@ -6,7 +6,7 @@ import json
 import pytest
 
 from linkx.models import ErrorKind, FetchError, FetchResult, Job, Outcome, Record
-from linkx.sink import Sink, percentile
+from linkx.sink import OutputFailed, Sink, percentile
 
 JOBS = [Job(i, f"http://h{i}.test/") for i in range(4)]
 
@@ -74,8 +74,9 @@ def test_nothing_is_written_after_a_failed_write() -> None:
     sink = Sink(stream, JOBS)
     with pytest.raises(OSError, match="disk full"):
         sink.emit(Record.cancelled(JOBS[0]))
-    with pytest.raises(RuntimeError, match="output failed"):
+    with pytest.raises(OutputFailed, match="output failed") as later:
         sink.emit(Record.cancelled(JOBS[1]))
+    assert isinstance(later.value.__cause__, OSError)
     assert stream.getvalue() == ""
 
 

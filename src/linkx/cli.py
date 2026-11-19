@@ -20,6 +20,7 @@ from linkx.fetch import DEFAULT_PORTS
 from linkx.models import Job, Outcome, Settings, Summary
 from linkx.overflow import POLICIES
 from linkx.pipeline import extract
+from linkx.sink import OutputFailed
 
 log = logging.getLogger("linkx")
 
@@ -43,7 +44,9 @@ def _bounded[T: (int, float)](
             value = convert(text)
         except ValueError:
             raise argparse.ArgumentTypeError(f"not a number: {text!r}") from None
-        if not math.isfinite(value):  # nan passes every comparison; inf disables a limit
+        # nan passes every comparison and inf disables a limit. Only floats can be either;
+        # math.isfinite on a huge int would raise OverflowError instead.
+        if isinstance(value, float) and not math.isfinite(value):
             raise argparse.ArgumentTypeError(f"must be a finite number, got {text}")
         if value < minimum or (not inclusive and value == minimum):
             relation = "at least" if inclusive else "above"
@@ -243,11 +246,23 @@ def _open_output(path: str | None) -> TextIO:
     return sys.stdout
 
 
-def _first_cause(exc: BaseException) -> BaseException:
-    """The first leaf of a (possibly nested) exception group from the TaskGroups."""
-    while isinstance(exc, BaseExceptionGroup):
-        exc = exc.exceptions[0]
-    return exc
+def _root_cause(exc: BaseException) -> BaseException:
+    """The error to report from a (possibly nested) exception group from the TaskGroups.
+
+    After one write fails, other tasks are refused with OutputFailed; the first failure
+    is the one the operator needs, so it is preferred to those."""
+    leaves: list[BaseException] = []
+    pending = [exc]
+    while pending:
+        current = pending.pop(0)
+        if isinstance(current, BaseExceptionGroup):
+            pending[:0] = current.exceptions
+        else:
+            leaves.append(current)
+    for leaf in leaves:
+        if not isinstance(leaf, OutputFailed):
+            return leaf
+    return leaves[0].__cause__ or leaves[0]
 
 
 def _silence_stdout() -> None:
@@ -284,7 +299,7 @@ def _run(
         log.warning("interrupted", extra={"event": "interrupt"})
         return EXIT_INTERRUPTED
     except Exception as exc:  # an output failure or a bug: not one URL's problem
-        cause = _first_cause(exc)
+        cause = _root_cause(exc)
         log.error("run failed: %s", cause, exc_info=cause, extra={"event": "failure"})
         if isinstance(cause, BrokenPipeError) and stream is sys.stdout:
             _silence_stdout()
@@ -304,7 +319,7 @@ def main(
 
     try:
         urls = read_urls(args.inputs)
-    except (OSError, UnicodeDecodeError) as exc:
+    except (OSError, ValueError) as exc:  # ValueError: not UTF-8, or a NUL in the path
         reason = "not UTF-8" if isinstance(exc, UnicodeDecodeError) else exc
         log.error("cannot read input: %s", reason, extra={"event": "usage_error"})
         return EXIT_USAGE
@@ -314,7 +329,7 @@ def main(
 
     try:
         stream = _open_output(args.out)
-    except OSError as exc:
+    except (OSError, ValueError) as exc:  # ValueError: a NUL in the path
         log.error("cannot open output: %s", exc, extra={"event": "usage_error"})
         return EXIT_USAGE
 
