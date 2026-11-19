@@ -8,6 +8,8 @@ import asyncio
 import gzip
 import inspect
 import socket
+import tracemalloc
+import zlib
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field, replace
@@ -23,6 +25,29 @@ type Handler = Callable[[httpx.Request], httpx.Response | Awaitable[httpx.Respon
 
 PUBLIC_IP = "93.184.216.34"
 SETTINGS = Settings(timeout=1.0, retries=2, max_bytes=1_000)
+
+
+class RawStream(httpx.AsyncByteStream):
+    """Body bytes exactly as a server sends them, delivered as a stream."""
+
+    def __init__(self, data: bytes) -> None:
+        self._data = data
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        yield self._data
+
+
+def as_network_response(response: httpx.Response) -> httpx.Response:
+    """httpx reads a Response built from bytes into memory at once, but a real transport
+    streams it. Re-wrap such responses so the fetcher's streaming path is what is tested."""
+    if isinstance(response.stream, httpx.ByteStream):
+        raw = b"".join(response.stream)  # the bytes as sent, before content decoding
+        return httpx.Response(response.status_code, headers=response.headers, stream=RawStream(raw))
+    return response
+
+
+def raw(status: int, headers: dict[str, str], body: bytes) -> httpx.Response:
+    return httpx.Response(status, headers=headers, stream=RawStream(body))
 
 
 def html(body: str = "<a href='/x'>x</a>", **kwargs: object) -> httpx.Response:
@@ -62,7 +87,9 @@ async def harness(
     async def recording_handler(request: httpx.Request) -> httpx.Response:
         requests.append(str(request.url))
         response = handler(request)
-        return await response if inspect.isawaitable(response) else response
+        if inspect.isawaitable(response):
+            response = await response
+        return as_network_response(response)
 
     async def recording_resolve(host: str, port: int) -> list[str]:
         resolved.append(host)
@@ -231,27 +258,110 @@ async def test_oversize_streamed_body_is_cut_off() -> None:
     assert result.error.kind == ErrorKind.TOO_LARGE
 
 
+@pytest.mark.parametrize(
+    ("encoding", "compress"),
+    [("gzip", gzip.compress), ("x-gzip", gzip.compress), ("deflate", zlib.compress)],
+)
+async def test_compressed_pages_are_decoded(
+    encoding: str, compress: Callable[[bytes], bytes]
+) -> None:
+    body = "<a href='/x'>café</a>".encode()
+    headers = {"content-type": "text/html; charset=utf-8", "content-encoding": encoding}
+    response = raw(200, headers, compress(body))
+    async with harness(sequence(response)) as h:
+        result = await h.fetch("http://a.test/")
+    assert result.error is None
+    assert result.html == "<a href='/x'>café</a>"
+
+
+async def test_only_gzip_and_deflate_are_requested() -> None:
+    seen: list[str] = []
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen.append(request.headers["accept-encoding"])
+        return html()
+
+    async with harness(handle) as h:
+        await h.fetch("http://a.test/")
+    assert seen == ["gzip, deflate"]
+
+
+@pytest.mark.parametrize(
+    ("encoding", "content"),
+    [("br", b"\x1b\x00\x00"), ("gzip", b"not gzip at all"), ("gzip, br", b"x")],
+)
+async def test_unsupported_or_corrupt_encoding_is_an_error(encoding: str, content: bytes) -> None:
+    response = raw(200, {"content-type": "text/html", "content-encoding": encoding}, content)
+    async with harness(sequence(response)) as h:
+        result = await h.fetch("http://a.test/")
+    assert result.error is not None
+    assert result.error.kind == ErrorKind.UNEXPECTED
+    assert result.attempts == 1
+
+
+async def test_decompression_bomb_never_holds_much_more_than_the_cap() -> None:
+    bomb = gzip.compress(b"\0" * 50_000_000)  # about 50 KB that expands to 50 MB
+    response = raw(200, {"content-type": "text/html", "content-encoding": "gzip"}, bomb)
+    tracemalloc.start()
+    try:
+        async with harness(sequence(response)) as h:
+            result = await h.fetch("http://a.test/bomb")
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert result.error is not None
+    assert result.error.kind == ErrorKind.TOO_LARGE
+    assert peak < 5_000_000, f"peak {peak} bytes while decoding a capped body"
+
+
+@pytest.mark.parametrize(("size", "kind"), [(1_000, None), (1_001, ErrorKind.TOO_LARGE)])
+async def test_a_response_already_read_into_memory_is_still_capped(
+    size: int, kind: ErrorKind | None
+) -> None:
+    # A plain MockTransport returns bytes responses already read; no streaming re-wrap here.
+    def handle(request: httpx.Request) -> httpx.Response:
+        response = httpx.Response(200, headers={"content-type": "text/html"}, content=b"x" * size)
+        assert response.is_stream_consumed  # httpx read it at construction
+        del response.headers["content-length"]  # so the early length check cannot decide
+        return response
+
+    async with make_client(SETTINGS, transport=httpx.MockTransport(handle)) as client:
+        fetcher = Fetcher(client, SETTINGS, resolve=resolve_public)
+        result = await fetcher.fetch(Job(0, "http://a.test/"))
+    assert (result.error.kind if result.error else None) == kind
+
+
+@pytest.mark.parametrize("charset", ["base64", "rot13", "hex", "utf-16"])
+async def test_non_text_or_unusable_charset_falls_back_to_utf8(charset: str) -> None:
+    response = httpx.Response(
+        200, headers={"content-type": f"text/html; charset={charset}"}, content=b"caf\xc3\xa9!"
+    )
+    async with harness(sequence(response)) as h:
+        result = await h.fetch("http://a.test/")
+    assert result.error is None
+    assert result.html is not None
+
+
 async def test_size_cap_counts_decompressed_bytes() -> None:
     bomb = gzip.compress(b"x" * 50_000)
     assert len(bomb) < SETTINGS.max_bytes
-    response = httpx.Response(
-        200, headers={"content-type": "text/html", "content-encoding": "gzip"}, content=bomb
-    )
+    response = raw(200, {"content-type": "text/html", "content-encoding": "gzip"}, bomb)
     async with harness(sequence(response)) as h:
         result = await h.fetch("http://a.test/gz")
     assert result.error is not None
     assert result.error.kind == ErrorKind.TOO_LARGE
 
 
-async def test_attempt_timeout() -> None:
+async def test_attempt_timeout_is_retried() -> None:
     async def slow(request: httpx.Request) -> httpx.Response:
         await asyncio.sleep(5)
         return html()
 
-    async with harness(slow, replace(SETTINGS, timeout=0.05, retries=0)) as h:
+    async with harness(slow, replace(SETTINGS, timeout=0.05, retries=1)) as h:
         result = await h.fetch("http://a.test/slow")
     assert result.error is not None
     assert result.error.kind == ErrorKind.TIMEOUT
+    assert result.attempts == 2
 
 
 @pytest.mark.parametrize(
@@ -388,6 +498,18 @@ async def test_allow_private_skips_the_address_check() -> None:
     assert h.resolved == []
 
 
+async def test_allow_private_also_follows_a_redirect_to_a_private_address() -> None:
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "a.test":
+            return httpx.Response(302, headers={"location": "http://10.0.0.5/internal"})
+        return html()
+
+    async with harness(handle, replace(SETTINGS, allow_private=True)) as h:
+        result = await h.fetch("http://a.test/")
+    assert result.error is None
+    assert result.final_url == "http://10.0.0.5/internal"
+
+
 async def test_resolver_failure_is_a_retried_connect_error() -> None:
     async def fail(host: str, port: int) -> list[str]:
         raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
@@ -425,6 +547,12 @@ async def test_system_resolver_returns_addresses() -> None:
         ("fe80::1%eth0", False),
         ("::ffff:10.0.0.1", False),
         ("224.0.0.1", False),
+        ("64:ff9b::a9fe:a9fe", False),  # NAT64 form of 169.254.169.254
+        ("64:ff9b::7f00:1", False),  # NAT64 form of 127.0.0.1
+        ("64:ff9b::808:808", True),  # NAT64 form of 8.8.8.8
+        ("::127.0.0.1", False),  # IPv4-compatible IPv6
+        ("192.0.0.9", False),
+        ("192.88.99.1", False),
     ],
 )
 def test_is_public(address: str, public: bool) -> None:
