@@ -1,5 +1,6 @@
 """End to end: the real CLI, real HTTP, a local server, and one bad URL among good ones."""
 
+import io
 import json
 import socket
 import threading
@@ -11,6 +12,8 @@ from pathlib import Path
 import pytest
 
 from linkx.cli import main
+from linkx.models import Job, Settings
+from linkx.pipeline import extract
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
@@ -90,6 +93,22 @@ def test_one_bad_url_does_not_affect_the_others(
     assert records[4]["error"]["kind"] == "invalid_url"
     assert records[5]["outcome"] == "ok"
     assert records[5]["links"] == [f"{server}/index.html"]
+
+
+async def test_dns_rebinding_to_loopback_is_refused(server: str) -> None:
+    # The address check is told "localhost" is public (a lying DNS server), but the real
+    # connection goes to 127.0.0.1. The check of the connected peer must still refuse it.
+    async def lying_resolver(host: str, port: int) -> list[str]:
+        return ["93.184.216.34"]
+
+    url = server.replace("127.0.0.1", "localhost") + "/index.html"
+    stream = io.StringIO()
+    settings = Settings(retries=0, progress_interval=0)
+    await extract([Job(0, url)], settings, stream, resolve=lying_resolver)
+    record = json.loads(stream.getvalue())
+    assert record["outcome"] == "fetch_error"
+    assert record["error"]["kind"] == "blocked_address"
+    assert "127.0.0.1" in record["error"]["message"]
 
 
 def test_loopback_is_refused_without_allow_private(server: str, tmp_path: Path) -> None:
