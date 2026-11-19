@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from linkx.cli import main
-from linkx.models import Job, Settings
+from linkx.models import Job, Outcome, Settings
 from linkx.pipeline import extract
 
 
@@ -33,6 +33,8 @@ def server(tmp_path: Path) -> Iterator[str]:
     )
     (root / "about.html").write_text('<a href="index.html">home</a>', encoding="utf-8")
     (root / "data.json").write_text("{}", encoding="utf-8")
+    (root / "docs").mkdir()
+    (root / "docs" / "index.html").write_text('<a href="intro.html">intro</a>', encoding="utf-8")
     handler = partial(QuietHandler, directory=str(root))
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
@@ -93,6 +95,20 @@ def test_one_bad_url_does_not_affect_the_others(
     assert records[4]["error"]["kind"] == "invalid_url"
     assert records[5]["outcome"] == "ok"
     assert records[5]["links"] == [f"{server}/index.html"]
+
+
+async def test_redirects_release_their_connection(server: str) -> None:
+    # http.server answers /docs with a 301 to /docs/. With one worker the pool holds one
+    # connection, so a 3xx that is never closed would make every later fetch time out.
+    jobs = [Job(i, f"{server}/docs?n={i}") for i in range(4)]
+    stream = io.StringIO()
+    settings = Settings(
+        concurrency=1, retries=0, timeout=2, allow_private=True, progress_interval=0
+    )
+    summary = await extract(jobs, settings, stream)
+    records = [json.loads(line) for line in stream.getvalue().splitlines()]
+    assert summary.counts[Outcome.OK] == 4, records
+    assert sorted(r["final_url"] for r in records) == [f"{server}/docs/?n={i}" for i in range(4)]
 
 
 async def test_dns_rebinding_to_loopback_is_refused(server: str) -> None:
