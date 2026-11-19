@@ -33,9 +33,9 @@ uv run linkx https://example.com https://www.python.org/ https://httpbin.org/sta
 `urls.txt` holds one URL per line; blank lines and lines starting with `#` are ignored. URL arguments and files can be mixed. Records go to `--out` or, without it, to stdout. Logs and the summary go to stderr:
 
 ```text
-21:35:31 INFO    start: 5 jobs (0 duplicates skipped), 10 workers, 1 consumers, queue 100 (drop-oldest)
+21:35:31 INFO    start: 5 jobs (duplicates skipped: 0), workers 10, consumers 1, queue 100 (drop-oldest)
 21:35:32 WARNING [#2] attempt 1 failed (http_status: HTTP 503); retrying in 0.95s
-21:35:33 INFO    summary: 5 jobs in 1.74s
+21:35:33 INFO    summary: 5 jobs, 1.74s
   outcomes: ok 3, fetch_error 2, parse_error 0, dropped 0, cancelled 0
   retries 1, max queue depth 1
   fetch latency ms: p50 200, p95 1735, max 1735
@@ -43,7 +43,7 @@ uv run linkx https://example.com https://www.python.org/ https://httpbin.org/sta
 
 ## Output
 
-One JSON object per line, UTF-8, in completion order. Every input URL gets exactly one record, so the output can be checked against the input:
+One JSON object per line, UTF-8, in completion order. Every job gets exactly one record, so the output can be checked against the input. A job is one distinct input URL: repeats are skipped and counted in the summary, unless `--keep-duplicates` is given. The line separators U+2028, U+2029 and U+0085 are escaped, so splitting on any line break gives one record per line.
 
 From the run above (the 127 python.org links shortened here):
 
@@ -83,6 +83,8 @@ Links are absolute `http`/`https` URLs from `<a href>`, resolved against `<base 
 | `--verbose` | off | log each attempt and each record |
 | `--log-json` | off | one JSON object per log line |
 
+Two more settings exist for library use only (`Settings` in [`models.py`](src/linkx/models.py)): `max_redirects` (9) and `progress_interval` (5 s; 0 turns the progress line off).
+
 | Exit code | Meaning |
 | --- | --- |
 | 0 | run completed, whatever the per-URL outcomes |
@@ -106,7 +108,7 @@ Everything runs as tasks on one event loop. The work is almost all waiting on th
 
 **Producers.** `--concurrency N` starts N worker tasks that share one iterator of jobs. `next()` never awaits, so no job is taken twice, and the task count stays at N however long the list is. Each worker fetches, then hands the result to the overflow policy.
 
-**Fetching** ([`fetch.py`](src/linkx/fetch.py)). One shared `httpx.AsyncClient`. An attempt is: wait for the host's slot (`--per-host-delay`), then send the request, follow up to 9 redirects and stream the body under one `asyncio.timeout`. httpx's own timeouts apply per phase (connect, read, ...), so they do not bound an attempt on their own. The body is counted as it streams and the attempt stops past `--max-bytes`; because httpx yields decompressed bytes, a small gzip body that expands past the cap is also stopped. Only `text/html` and `application/xhtml+xml` are accepted. Timeouts, connection errors, 5xx and 429 are retried with full-jitter exponential backoff (a random wait up to 0.5 s × 2^k, capped at 5 s). `fetch()` turns every failure into a result with an error kind and never raises `Exception`.
+**Fetching** ([`fetch.py`](src/linkx/fetch.py)). One shared `httpx.AsyncClient`. An attempt is: wait for the host's slot (`--per-host-delay`), then send the request, follow up to 9 redirects and stream the body under one `asyncio.timeout`. httpx's own timeouts apply per phase (connect, read, ...), so they do not bound an attempt on their own. The body is counted as it streams and the attempt stops past `--max-bytes`. `linkx` asks only for gzip or deflate and decompresses them itself in bounded steps (`zlib` with `max_length`), because httpx inflates a whole network chunk at once: 64 KB of gzip can become 64 MB before any cap sees it. A 50 MB gzip bomb is refused while holding under 5 MB (a test checks this). Only `text/html` and `application/xhtml+xml` are accepted. Timeouts, connection errors, 5xx and 429 are retried with full-jitter exponential backoff (a random wait up to 0.5 s × 2^k, capped at 5 s). `fetch()` turns every failure into a result with an error kind and never raises `Exception`.
 
 **Queue and overflow** ([`overflow.py`](src/linkx/overflow.py)). A plain `asyncio.Queue(maxsize)`. A policy is one function that puts an item and returns what it evicted, if anything. `drop-oldest` checks, evicts and puts with no `await` in between, so on one event loop the three steps cannot interleave with another worker's, without a lock. The worker then writes a `dropped` record for the evicted result straight away.
 
@@ -120,7 +122,7 @@ Everything runs as tasks on one event loop. The work is almost all waiting on th
 
 **Ctrl-C.** The run installs a `SIGINT` handler with `signal.signal` (Windows has no `loop.add_signal_handler`) that schedules `Pipeline.interrupt()` on the loop. The first Ctrl-C cancels the fetch workers and lets the consumers finish what is already queued; a second cancels the consumers too. Because the handler only schedules a call, cancellation always lands at an `await`, never half-way through writing a record. Without this, `asyncio.run` would cancel the consumers on the first Ctrl-C and lose the queued results; I checked both behaviours on Python 3.13 and 3.15 before choosing.
 
-**Non-public addresses.** By default `linkx` refuses loopback, private, link-local, carrier-grade NAT and multicast addresses. The check is an httpx request hook, which runs before the first request and before every redirect hop, so a public URL cannot redirect into an internal network (for example a cloud metadata endpoint). `--allow-private` turns it off.
+**Non-public addresses.** By default `linkx` refuses loopback, private, link-local, carrier-grade NAT and multicast addresses, including those hidden inside IPv6 forms (IPv4-mapped, NAT64 `64:ff9b::/96`, IPv4-compatible). The check is an httpx request hook, which runs before the first request and before every redirect hop, so a public URL cannot redirect into an internal network (for example a cloud metadata endpoint). `--allow-private` turns it off.
 
 **Observability.** Records are the per-URL log. Operational logs go to stderr through the standard `logging` module, each per-URL line tagged with the job index: start settings, a progress line every 5 s (done, in flight, queue depth, dropped), each retry, drop and interrupt, and the summary (counts per outcome, retries, highest queue depth, p50/p95/max fetch latency). `--log-json` makes every line a JSON object for a log collector.
 
@@ -213,7 +215,7 @@ URL scheduler --> [urls topic, keyed by host] --> fetchers --> [raw-html topic, 
 
 ```bash
 uv sync
-uv run pytest --cov            # 187 tests, about 5 s
+uv run pytest --cov            # 223 tests, about 5 s
 uv run ruff check && uv run ruff format --check
 uv run mypy                    # strict
 uv run python scripts/demo_backpressure.py
