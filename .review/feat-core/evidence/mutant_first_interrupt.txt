@@ -1,0 +1,9 @@
+$ uv run python .review\feat-core\evidence\mutant_first_interrupt.py   (mutant: first interrupt cancels consumers; the test must fail)
+
+>       assert [result[i]["outcome"] for i in range(7)] == ["ok"] * 5 + ["cancelled"] * 2
+E       AssertionError: assert ['cancelled',...ncelled', ...] == ['ok', 'ok', ...ncelled', ...]
+tests\test_pipeline.py:253: AssertionError
+FAILED tests/test_pipeline.py::test_first_interrupt_still_parses_every_queued_result
+1 failed in 0.09s
+
+[exit 1]

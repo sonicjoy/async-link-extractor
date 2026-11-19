@@ -1,6 +1,6 @@
 # Goldfish Review Report
 
-**Target:** `C:\Users\sonic\source\repos\async-link-extractor\docs\designs\linkx.md` (`227-255`, Detailed Implementation Plan; lines 1-226 read as the specification)
+**Target:** `docs\designs\linkx.md` (`227-255`, Detailed Implementation Plan; lines 1-226 read as the specification)
 
 **Stage:** 9, Implementation Readiness Test
 

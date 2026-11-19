@@ -97,7 +97,11 @@ def is_public(address: str) -> bool:
 def make_client(
     settings: Settings, transport: httpx.AsyncBaseTransport | None = None
 ) -> httpx.AsyncClient:
-    """One shared client: a connection pool sized to the worker count."""
+    """One shared client: a connection pool sized to the worker count.
+
+    A custom `transport` must report the socket in the response's `network_stream`
+    extension, as httpx's own transport does, or the connected-address check is skipped.
+    """
     return httpx.AsyncClient(
         transport=transport,
         # No proxies from the environment: the address checks must see the real server,
