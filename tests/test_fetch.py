@@ -538,14 +538,16 @@ async def test_allow_private_skips_the_address_check() -> None:
 class FakeNetworkStream:
     """Stands in for httpcore's stream: reports which address the connection reached."""
 
-    def __init__(self, peer: str) -> None:
+    def __init__(self, peer: str | None) -> None:
         self.peer = peer
 
     def get_extra_info(self, name: str) -> object:
-        return (self.peer, 80) if name == "server_addr" else None
+        if name != "server_addr" or self.peer is None:
+            return None  # as anyio reports it once the socket was reset
+        return (self.peer, 80)
 
 
-def connected_to(peer: str, response: httpx.Response) -> httpx.Response:
+def connected_to(peer: str | None, response: httpx.Response) -> httpx.Response:
     return httpx.Response(
         response.status_code,
         headers=response.headers,
@@ -575,6 +577,25 @@ async def test_redirect_hop_that_connected_to_a_private_address_is_refused() -> 
     assert result.error is not None
     assert result.error.kind == ErrorKind.BLOCKED_ADDRESS
     assert h.requests == ["http://a.test/start", "http://a.test/next"]
+
+
+async def test_connection_whose_address_cannot_be_read_is_refused() -> None:
+    # Fail closed: a real connection whose peer is unknown (for example reset by the
+    # server just after answering) must not be trusted.
+    async with harness(lambda request: connected_to(None, html())) as h:
+        result = await h.fetch("http://a.test/")
+    assert result.error is not None
+    assert result.error.kind == ErrorKind.BLOCKED_ADDRESS
+    assert "unknown" in result.error.message
+
+
+@pytest.mark.parametrize("target", ["javascript:alert(1)", "mailto:a@b.test"])
+async def test_redirect_to_a_non_web_url_is_invalid_and_not_retried(target: str) -> None:
+    async with harness(sequence(httpx.Response(302, headers={"location": target}))) as h:
+        result = await h.fetch("http://a.test/")
+    assert result.error is not None
+    assert result.error.kind == ErrorKind.INVALID_URL
+    assert result.attempts == 1
 
 
 async def test_connection_to_a_public_address_is_accepted() -> None:

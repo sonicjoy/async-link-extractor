@@ -257,6 +257,10 @@ class Fetcher:
             ) from None
         except httpx.TimeoutException as exc:
             raise FetchFailure(ErrorKind.TIMEOUT, _describe(exc), retryable=True) from None
+        except httpx.InvalidURL as exc:  # a redirect to javascript:, mailto: and the like
+            raise FetchFailure(
+                ErrorKind.INVALID_URL, f"redirect to an invalid URL: {exc}"
+            ) from None
         except httpx.TransportError as exc:
             raise FetchFailure(ErrorKind.CONNECT, _describe(exc), retryable=True) from None
 
@@ -323,11 +327,16 @@ class Fetcher:
         if self._settings.allow_private:
             return
         stream = response.extensions.get("network_stream")
-        peer = stream.get_extra_info("server_addr") if stream is not None else None
-        if peer and not is_public(str(peer[0])):
+        if stream is None:  # no network connection: an in-memory transport, as in tests
+            return
+        # Fail closed: once a socket is reset its address can no longer be read, and an
+        # unknown peer must not be trusted.
+        peer = stream.get_extra_info("server_addr")
+        address = str(peer[0]) if peer else None
+        if address is None or not is_public(address):
             raise FetchFailure(
                 ErrorKind.BLOCKED_ADDRESS,
-                f"{response.url.host} connected to non-public address {peer[0]}"
+                f"{response.url.host} connected to non-public address {address or 'unknown'}"
                 " (use --allow-private to permit)",
             )
 
