@@ -586,7 +586,11 @@ async def test_connection_whose_address_cannot_be_read_is_refused() -> None:
         result = await h.fetch("http://a.test/")
     assert result.error is not None
     assert result.error.kind == ErrorKind.BLOCKED_ADDRESS
-    assert "unknown" in result.error.message
+    # The address is unknown, not known to be private, and the advice must not be to turn
+    # every protection off.
+    assert "could not confirm" in result.error.message
+    assert "non-public" not in result.error.message
+    assert "--allow-private" not in result.error.message
 
 
 @pytest.mark.parametrize("target", ["javascript:alert(1)", "mailto:a@b.test"])

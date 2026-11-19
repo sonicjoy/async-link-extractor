@@ -78,12 +78,12 @@ Links are absolute `http`/`https` URLs from `<a href>`, resolved against `<base 
 | `--retries N` | 2 | extra attempts after timeouts, connection errors, 5xx and 429 |
 | `--max-bytes N` | 2,000,000 | largest body accepted, counted after decompression |
 | `--per-host-delay S` | 0 | minimum gap between requests to one host |
-
-Upper bounds, far above real use, stop a typo from hanging or exhausting memory: `--concurrency` 1,000, `--consumers` 64, `--queue-max` 1,000,000, `--max-bytes` 1,000,000,000, `--retries` 10, `--timeout` and `--per-host-delay` 3,600 s.
 | `--allow-private` | off | permit loopback, private and link-local addresses |
 | `--keep-duplicates` | off | fetch a repeated URL once per occurrence |
 | `--verbose` | off | log each attempt and each record |
 | `--log-json` | off | one JSON object per log line |
+
+Upper bounds, far above real use, stop a typo from hanging or exhausting memory: `--concurrency` 1,000, `--consumers` 64, `--queue-max` 1,000,000, `--max-bytes` 1,000,000,000, `--retries` 10, `--timeout` and `--per-host-delay` 3,600 s.
 
 Two more settings exist for library use only (`Settings` in [`models.py`](src/linkx/models.py)): `max_redirects` (9) and `progress_interval` (5 s; 0 turns the progress line off).
 
@@ -224,7 +224,7 @@ URL scheduler --> [urls topic, keyed by host] --> fetchers --> [raw-html topic, 
 
 ```bash
 uv sync
-uv run pytest --cov            # 255 tests, about 7 s
+uv run pytest --cov            # 254 tests, about 7 s
 uv run ruff check && uv run ruff format --check
 uv run mypy                    # strict
 uv run python scripts/demo_backpressure.py

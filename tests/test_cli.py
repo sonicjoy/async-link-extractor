@@ -132,15 +132,16 @@ def test_non_finite_numbers_are_usage_errors(args: list[str]) -> None:
     ],
 )
 def test_options_have_an_upper_bound(option: str, largest: str) -> None:
+    # Parse only: if a bound ever regresses, main() would start a real run and hang.
     build_parser().parse_args(["http://x.test/", option, largest])  # the bound itself is fine
     with pytest.raises(SystemExit) as exc:
-        main(["http://x.test/", option, str(int(float(largest)) + 1)])
+        build_parser().parse_args(["http://x.test/", option, str(int(float(largest)) + 1)])
     assert exc.value.code == 2
 
 
 def test_a_huge_integer_option_is_a_usage_error_not_a_crash() -> None:
     with pytest.raises(SystemExit) as exc:
-        main(["http://x.test/", "--retries", "9" * 400])
+        build_parser().parse_args(["http://x.test/", "--retries", "9" * 400])
     assert exc.value.code == 2
 
 

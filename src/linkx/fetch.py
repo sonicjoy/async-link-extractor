@@ -269,7 +269,9 @@ class Fetcher:
 
         Each 3xx is closed without reading its body: the only body ever read is the final
         one, through the size cap. httpx builds the next request (`next_request`),
-        resolving a relative Location; an unparseable one raises RemoteProtocolError.
+        resolving a relative Location. An unparseable Location raises RemoteProtocolError
+        (`connect`); one with a non-web scheme such as `javascript:` raises InvalidURL
+        (`invalid_url`).
         """
         for _ in range(self._settings.max_redirects + 1):
             response = await self._client.send(request, stream=True)
@@ -327,16 +329,25 @@ class Fetcher:
         if self._settings.allow_private:
             return
         stream = response.extensions.get("network_stream")
-        if stream is None:  # no network connection: an in-memory transport, as in tests
+        if stream is None:
+            # No network stream: an in-memory transport, as in tests. A custom transport
+            # that drops response extensions would skip this check too (library use only;
+            # the CLI always uses httpx's own transport).
             return
-        # Fail closed: once a socket is reset its address can no longer be read, and an
-        # unknown peer must not be trusted.
         peer = stream.get_extra_info("server_addr")
-        address = str(peer[0]) if peer else None
-        if address is None or not is_public(address):
+        if not peer:
+            # Fail closed: once a socket is reset its address can no longer be read, and
+            # an unknown peer must not be trusted.
             raise FetchFailure(
                 ErrorKind.BLOCKED_ADDRESS,
-                f"{response.url.host} connected to non-public address {address or 'unknown'}"
+                f"could not confirm the address {response.url.host} connected to"
+                " (the connection may have been reset)",
+            )
+        address = str(peer[0])
+        if not is_public(address):
+            raise FetchFailure(
+                ErrorKind.BLOCKED_ADDRESS,
+                f"{response.url.host} connected to non-public address {address}"
                 " (use --allow-private to permit)",
             )
 
