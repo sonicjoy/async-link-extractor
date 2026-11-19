@@ -135,6 +135,13 @@ class Fetcher:
             url = validate_url(job.url)
             while True:
                 attempts += 1
+                log.debug(
+                    "[#%d] attempt %d: GET %s",
+                    job.index,
+                    attempts,
+                    job.url,
+                    extra={"event": "attempt", "index": job.index, "attempt": attempts},
+                )
                 try:
                     final_url, status, html = await self._attempt(url)
                 except FetchFailure as failure:
