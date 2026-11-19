@@ -5,6 +5,7 @@ clock are replaced so the tests are fast and deterministic.
 """
 
 import asyncio
+import encodings.aliases
 import gzip
 import inspect
 import socket
@@ -17,7 +18,7 @@ from dataclasses import dataclass, field, replace
 import httpx
 import pytest
 
-from linkx.fetch import Fetcher, is_public, make_client, system_resolve
+from linkx.fetch import Fetcher, _decode, _inflate, is_public, make_client, system_resolve
 from linkx.models import ErrorKind, FetchResult, Job, Settings
 from linkx.ratelimit import HostLimiter
 
@@ -331,7 +332,43 @@ async def test_a_response_already_read_into_memory_is_still_capped(
     assert (result.error.kind if result.error else None) == kind
 
 
-@pytest.mark.parametrize("charset", ["base64", "rot13", "hex", "utf-16"])
+async def test_redirect_bodies_are_never_read() -> None:
+    # httpx reads a 3xx body in full when it follows a redirect itself. linkx follows
+    # redirects itself and closes each 3xx unread, so a bomb on a redirect costs nothing.
+    bomb = gzip.compress(b"\0" * 50_000_000)
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/start":
+            headers = {"location": "/page", "content-encoding": "gzip", "content-type": "text/html"}
+            return raw(302, headers, bomb)
+        return html()
+
+    tracemalloc.start()
+    try:
+        async with harness(handle) as h:
+            result = await h.fetch("http://a.test/start")
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+    assert result.error is None
+    assert result.final_url == "http://a.test/page"
+    assert peak < 5_000_000, f"peak {peak} bytes following a redirect"
+
+
+@pytest.mark.parametrize(("room", "expected"), [(0, 1), (10, 11), (99, 100), (500, 200)])
+def test_inflate_produces_at_most_one_byte_past_the_room(room: int, expected: int) -> None:
+    data = zlib.compress(bytes(range(200)))
+    inflate = zlib.decompressobj(zlib.MAX_WBITS | 32)
+    assert len(_inflate(inflate, data, room)) == expected
+
+
+def test_every_known_codec_name_decodes_or_falls_back() -> None:
+    names = set(encodings.aliases.aliases.values()) | {"idna", "undefined", "base64", "rot13"}
+    for name in sorted(names):
+        assert isinstance(_decode("café <a>".encode(), name), str), name
+
+
+@pytest.mark.parametrize("charset", ["base64", "rot13", "hex", "utf-16", "idna", "undefined"])
 async def test_non_text_or_unusable_charset_falls_back_to_utf8(charset: str) -> None:
     response = httpx.Response(
         200, headers={"content-type": f"text/html; charset={charset}"}, content=b"caf\xc3\xa9!"
