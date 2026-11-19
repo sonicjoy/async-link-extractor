@@ -2,9 +2,9 @@
 
 **Verdict:** FAIL
 
-Scope: `fixes-round1.patch` = `25ed227..49bf5b3` (byte-identical to `git diff 25ed227 49bf5b3`). While this review ran, two more commits landed on the branch (`32c069c` connected-peer check, `5733556` docs). They are not in this patch and were not reviewed. The two MAJOR findings below were re-run on `5733556` and still reproduce there. Note that `decisions.md`'s "Waiting for the user" list (DNS rebinding, proxies) is now out of date with `32c069c`.
+Scope: `fixes-round1.patch` = `f51d6b3..ffc8cec` (byte-identical to `git diff f51d6b3 ffc8cec`). While this review ran, two more commits landed on the branch (`a36f258` connected-peer check, `4416694` docs). They are not in this patch and were not reviewed. The two MAJOR findings below were re-run on `4416694` and still reproduce there. Note that `decisions.md`'s "Waiting for the user" list (DNS rebinding, proxies) is now out of date with `a36f258`.
 
-Baseline: 223 passed on `49bf5b3`; ruff, ruff format and mypy are clean. All experiments wrote only under the scratchpad and used localhost only.
+Baseline: 223 passed on `ffc8cec`; ruff, ruff format and mypy are clean. All experiments wrote only under the scratchpad and used localhost only.
 
 The FAIL rests on two MAJOR findings. (1) The decompression bound covers only the final response: a redirect's body is still inflated by httpx with no limit (400 MB peak for a 200 KB gzip). (2) The sink's new failed flag hides the real output error from the CLI, which also skips the broken-pipe handling.
 
@@ -48,7 +48,7 @@ The FAIL rests on two MAJOR findings. (1) The decompression bound covers only th
 ### [MAJOR] Redirect bodies bypass the bounded decompression and `max-bytes`
 - **Where:** `src/linkx/fetch.py:97-116` (`follow_redirects=True`) together with httpx `_client.py:1700-1708` (`if follow_redirects: await response.aread()`); claim at `README.md` ("A 50 MB gzip bomb is refused while holding under 5 MB") and design line 234 (at most N + queue-max + M bodies of up to `max-bytes` each).
 - **Problem:** `_read_body` bounds only the final response. httpx fully reads every 3xx body, decoded by its own `GZipDecoder`/`DeflateDecoder` with no limit and no cap, and keeps it in `response.history` until the fetch ends (up to 9 hops). The security finding's property, memory per fetch near `max-bytes`, still fails through this route: a hostile URL list that 302s with a gzip bomb gets the old amplification back, about 10× per worker at default concurrency. An uncompressed large 3xx body is likewise unbounded except by the timeout.
-- **Evidence:** localhost `ThreadingHTTPServer`, one job, `max_bytes=2_000_000`, a 200 MB-of-zeros gzip body (~200 KB), traced with `tracemalloc`. Same result on `49bf5b3` and `5733556`:
+- **Evidence:** localhost `ThreadingHTTPServer`, one job, `max_bytes=2_000_000`, a 200 MB-of-zeros gzip body (~200 KB), traced with `tracemalloc`. Same result on `ffc8cec` and `4416694`:
   ```
   /bomb200 peak MB 10.9   outcome fetch_error too_large
   /bomb302 peak MB 400.1  outcome ok (followed to /small)
@@ -61,7 +61,7 @@ The FAIL rests on two MAJOR findings. (1) The decompression bound covers only th
 - **Problem:** Tasks that run in the same loop iteration as the failing write now raise `RuntimeError("output failed earlier…")`. TaskGroup collects errors in completion order, and a nested worker group's exception is appended after the outer group's own task errors, so the first leaf is often that `RuntimeError` rather than the `OSError`. The CLI then logs `run failed: output failed earlier; no further records are written`, and the cause ("disk full", "Broken pipe") never reaches the operator. `isinstance(cause, BrokenPipeError)` is also false, so `_silence_stdout()` is skipped. Its own docstring explains what then happens: the interpreter's final flush of stdout fails again, which on POSIX turns `linkx … | head -1` into an "Exception ignored … BrokenPipeError" message and exit 120 instead of 1. That last step is reasoned, not run; Windows has no `SIGPIPE`.
 - **Evidence:**
   - `Pipeline` with a stream that raises `BrokenPipeError` from write k on (k 1–20, 50 jobs, random workers, consumers and queue): `177 BrokenPipeError` and `123 RuntimeError: output failed earlier` as the first leaf, out of 300.
-  - `cli.main` with 60 URLs (MockTransport), queue 1, a broken `sys.stdout`, 87 runs: on `49bf5b3`, **87/87** logged `run failed: output failed earlier…` and `_silence_stdout` was called 0 times. On `25ed227` the same script gave 87/87 `run failed: [Errno 32] Broken pipe`, with silencing called every time.
+  - `cli.main` with 60 URLs (MockTransport), queue 1, a broken `sys.stdout`, 87 runs: on `ffc8cec`, **87/87** logged `run failed: output failed earlier…` and `_silence_stdout` was called 0 times. On `f51d6b3` the same script gave 87/87 `run failed: [Errno 32] Broken pipe`, with silencing called every time.
   - `test_output_failure_exits_1` does not catch this because it fetches one URL, so there is only one write.
 - **Confidence:** high (message and skipped silencing); medium (the exit-120 consequence).
 - **Suggested fix:** keep the original exception in the sink (`self._failure = exc`) and raise a dedicated `OutputFailed(...) from self._failure`. In `_first_cause`, walk all leaves and prefer one that is not `OutputFailed` (or unwrap its `__cause__`). Add a CLI test with several URLs and a `BrokenPipeError` stdout that asserts the message and that `_silence_stdout` is called.
@@ -98,9 +98,9 @@ None. Every blocker or major finding in the three reports is fixed, decided, or 
 
 ## Waiting for the owner
 
-- DNS rebinding (security HIGH): the list says the design accepts the gap explicitly. That is true of `docs/designs/linkx.md:113` at `49bf5b3`. Commit `32c069c`, which landed after this patch, adds a connected-peer response hook for it. The waiting list is now stale and that commit needs its own review.
-- Environment proxies (security LOW): accurate at `49bf5b3` (`trust_env` left at its default). `32c069c` sets `trust_env=False`, so this item is also stale.
-- Design wording drift (correctness table): `5733556` edits the design. Not reviewed here.
+- DNS rebinding (security HIGH): the list says the design accepts the gap explicitly. That is true of `docs/designs/linkx.md:113` at `ffc8cec`. Commit `a36f258`, which landed after this patch, adds a connected-peer response hook for it. The waiting list is now stale and that commit needs its own review.
+- Environment proxies (security LOW): accurate at `ffc8cec` (`trust_env` left at its default). `a36f258` sets `trust_env=False`, so this item is also stale.
+- Design wording drift (correctness table): `4416694` edits the design. Not reviewed here.
 
 ## The same class again
 

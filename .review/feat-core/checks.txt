@@ -1,4 +1,4 @@
-# Step 1 checks at HEAD 25ed227, 2026-11-19T21:39:48
+# Step 1 checks at HEAD f51d6b3, 2026-11-19T21:39:48
 # linkx keeps no user data or settings (no config file, home folder or database); tests write only to pytest tmp_path. No stand-in folders were needed.
 
 $ uv run ruff format --check
@@ -124,7 +124,7 @@ FAILED tests/test_sink.py::test_nothing_is_written_after_a_failed_write - Fai...
 ERROR tests/test_cli.py
 18 failed, 153 passed, 1 error in 5.54s
 
-# Re-run after fix round 1 at HEAD 49bf5b3, 2026-11-19T22:02:46
+# Re-run after fix round 1 at HEAD ffc8cec, 2026-11-19T22:02:46
 
 $ uv run ruff format --check
 29 files already formatted
@@ -218,7 +218,7 @@ FAILED tests/test_fetch.py::test_non_text_or_unusable_charset_falls_back_to_utf8
 FAILED tests/test_fetch.py::test_non_text_or_unusable_charset_falls_back_to_utf8[undefined]
 8 failed, 234 passed in 6.41s
 
-# Re-run after fix round 2 at HEAD b8ff835, 2026-11-19T22:17:24
+# Re-run after fix round 2 at HEAD a7695ac, 2026-11-19T22:17:24
 
 $ uv run ruff format --check
 29 files already formatted
@@ -306,7 +306,7 @@ FAILED tests/test_fetch.py::test_redirect_to_a_non_web_url_is_invalid_and_not_re
 FAILED tests/test_fetch.py::test_redirect_to_a_non_web_url_is_invalid_and_not_retried[mailto:a@b.test]
 4 failed, 242 passed, 8 deselected in 6.93s
 
-# Re-run after fix set 3 at HEAD 1591d2c, 2026-11-19T23:04:55
+# Re-run after fix set 3 at HEAD d361b88, 2026-11-19T23:04:55
 
 $ uv run ruff format --check
 29 files already formatted

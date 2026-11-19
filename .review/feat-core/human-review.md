@@ -2,7 +2,7 @@
 
 Needs you: 0 · Decisions made for you: 9 · Cleared with proof: 7
 Spec/plan: `docs/designs/linkx.md` (Status: Approved; wording updated with the author's approval to match review fixes)
-Reviewed at: 26f47a7. Commits since: none
+Reviewed at: 53c50a5. Commits since: none
 
 | Evidence | Status | File |
 |---|---|---|

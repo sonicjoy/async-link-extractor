@@ -2,7 +2,7 @@
 
 **Verdict:** PASS WITH ISSUES
 
-Spec: `docs/designs/linkx.md`, **Status: Approved** (2026-11-19). Branch `feat/core` at 25ed227 against `main`.
+Spec: `docs/designs/linkx.md`, **Status: Approved** (2026-11-19). Branch `feat/core` at f51d6b3 against `main`.
 
 The core guarantees hold under load. A randomized stress run of 1,000 pipelines exercised random job counts (0–60), both policies, 1–8 workers, 1–4 consumers, queue sizes 1–5, retries, timeouts, too-large bodies, redirect loops, parser exceptions, invalid URLs, and no interrupt, an interrupt before `run`, one interrupt or two interrupts at random times. Every run produced exactly one record per job, no cancelled records on uninterrupted runs, and summary counts that summed to the job count (`done, failures: 0`). The findings below are about edges around that core, plus one test gap on the most important interrupt behaviour.
 

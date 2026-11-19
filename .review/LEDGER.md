@@ -29,7 +29,7 @@ The short memory across reviews: the kinds of mistake found here, what is still 
 | `Settings` built in library code has no upper bounds (only the CLI checks them) | src/linkx/models.py | feat-core, fix review round 3 MINOR | open |
 | A record lost during an interrupted run is indistinguishable from a cancelled job | src/linkx/sink.py | feat-core, author's stress check | open (design limit) |
 | The `Accept-Encoding` pin has no test that fails without it unless brotli or zstandard is installed | tests/test_fetch.py | feat-core, fix review round 1 MINOR | open |
-| CI actions are tag-pinned, not SHA-pinned | .github/workflows/ci.yml | feat-core, security LOW | closed: merged in b4880b0 |
+| CI actions are tag-pinned, not SHA-pinned | .github/workflows/ci.yml | feat-core, security LOW | closed: merged in 6dfa385 |
 | Dockerfile and opt-in robots.txt (designed, not built) | README "Not built" | design non-goals | open |
 
 ## Reviews
@@ -42,7 +42,7 @@ The short memory across reviews: the kinds of mistake found here, what is still 
 | 2026-11-19 | design stage 7, critic | n/a | 0 Blocker, 6 Major; late-Ctrl-C drain, audit gap fixed. [report](design/critic_report.md) |
 | 2026-11-19 | design stage 9, readiness | n/a | 1 Blocker (address policy, decided by the author), 13 Major. [report](design/implementation_readiness_report.md) |
 | 2026-11-19 | design stage 8, intermediate zoom out | n/a | 0 Blocker, 4 Major; redirect checks moved to an httpx hook after an experiment. [report](design/intermediate_zoom_out_report.md) |
-| 2026-11-19 | feat-core (code) | 26f47a7 | Full path. Correctness 0 blocker / 2 major, security 1 high / 1 medium, simplicity 5 should; 4 fix sets, 4 fix reviews (round 2 reached the cap: 1 major went to the author, who chose fail closed). 5 classes added, 13 follow-ups open. Needed the user: 3 (rebinding approach, design wording, fail-closed after the cap). First GitHub CI run failed (missing `setup-uv@v10` tag); actions SHA-pinned in 5edfad0, fix-reviewed, CI green on all 4 jobs. Not "clear" (no formal model check); pushed and merged with the user's go-ahead. [packet](feat-core/human-review.md) |
+| 2026-11-19 | feat-core (code) | 53c50a5 | Full path. Correctness 0 blocker / 2 major, security 1 high / 1 medium, simplicity 5 should; 4 fix sets, 4 fix reviews (round 2 reached the cap: 1 major went to the author, who chose fail closed). 5 classes added, 13 follow-ups open. Needed the user: 3 (rebinding approach, design wording, fail-closed after the cap). First GitHub CI run failed (missing `setup-uv@v10` tag); actions SHA-pinned in a91cdfe, fix-reviewed, CI green on all 4 jobs. Not "clear" (no formal model check); pushed and merged with the user's go-ahead. [packet](feat-core/human-review.md) |
 | 2026-11-20 | docs/live-run | (this commit) | Docs-only path: one fact-check reviewer recomputed every number from the logs and records. 1 false ("last 1%" was the last 2.6%), 2 imprecise (5-second progress granularity), 1 stale comment, 2 unverifiable claims reworded; all fixed. 2 follow-ups added (Retry-After, per-provider politeness). [review](docs-live-run/review.md) |
 
 ## Decisions kept against reviewer advice (design)

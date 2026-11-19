@@ -2,7 +2,7 @@
 
 **Verdict:** FAIL
 
-Scope: `fixes-round2.patch` = `49bf5b3..b8ff835` (byte-identical to `git diff 49bf5b3 HEAD`). Baseline on HEAD: **243 passed** in 6.3 s; `ruff check`, `ruff format --check` and `mypy` are clean. httpx 0.28.1, httpcore 1.0.9, Python 3.15.2 on Windows. Every experiment ran against localhost servers from a scratch folder; mutants ran on copies of `src/` and `tests/` in that folder, never in the repository.
+Scope: `fixes-round2.patch` = `ffc8cec..a7695ac` (byte-identical to `git diff ffc8cec HEAD`). Baseline on HEAD: **243 passed** in 6.3 s; `ruff check`, `ruff format --check` and `mypy` are clean. httpx 0.28.1, httpcore 1.0.9, Python 3.15.2 on Windows. Every experiment ran against localhost servers from a scratch folder; mutants ran on copies of `src/` and `tests/` in that folder, never in the repository.
 
 The FAIL rests on one MAJOR. The connected-peer check is **fail-open**: when the peer address cannot be read, the check is skipped and the body is read. An internal service that answers and then resets the connection (RST) has its page parsed and its links written out. Measured: 40 of 40 records `ok` through `extract`, links included. Everything else claimed in this round is resolved. The manual redirect loop behaves like httpx's own following in every case I tried. Each new test fails when its fix is reverted, with one exception: nothing tests that a 3xx is closed.
 

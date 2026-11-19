@@ -14,7 +14,7 @@ TRUE (computed value):
 - 650 vs 653 ok ("three differences"): true
 - Time to 900 done c50 26 s, c10 161 s; to 990 c50 66 s, c10 186 s (first progress line at or past the count): matches, but see imprecision below
 - README anchor #not-built-and-how-i-would-build-it exists (heading line 205); docs/live-run/README.md and all linked files exist: true
-- Ledger row closed with b4880b0: commit exists, is on main, merges the SHA-pinning fix; ci.yml uses SHA pins: true
+- Ledger row closed with 6dfa385: commit exists, is on main, merges the SHA-pinning fix; ci.yml uses SHA pins: true
 - analyse.py and measure.py compute what is described (nearest-rank; wall/CPU/peak working set): true
 
 FALSE or IMPRECISE:
