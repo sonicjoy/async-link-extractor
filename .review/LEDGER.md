@@ -27,7 +27,7 @@ The short memory across reviews: the kinds of mistake found here, what is still 
 | `Settings` built in library code has no upper bounds (only the CLI checks them) | src/linkx/models.py | feat-core, fix review round 3 MINOR | open |
 | A record lost during an interrupted run is indistinguishable from a cancelled job | src/linkx/sink.py | feat-core, author's stress check | open (design limit) |
 | The `Accept-Encoding` pin has no test that fails without it unless brotli or zstandard is installed | tests/test_fetch.py | feat-core, fix review round 1 MINOR | open |
-| CI actions are tag-pinned, not SHA-pinned | .github/workflows/ci.yml | feat-core, security LOW | open |
+| CI actions are tag-pinned, not SHA-pinned | .github/workflows/ci.yml | feat-core, security LOW | fixed in feat-core, unmerged (the first CI run failed on a missing `setup-uv@v10` tag) |
 | Dockerfile and opt-in robots.txt (designed, not built) | README "Not built" | design non-goals | open |
 
 ## Reviews
