@@ -498,6 +498,66 @@ async def test_allow_private_skips_the_address_check() -> None:
     assert h.resolved == []
 
 
+class FakeNetworkStream:
+    """Stands in for httpcore's stream: reports which address the connection reached."""
+
+    def __init__(self, peer: str) -> None:
+        self.peer = peer
+
+    def get_extra_info(self, name: str) -> object:
+        return (self.peer, 80) if name == "server_addr" else None
+
+
+def connected_to(peer: str, response: httpx.Response) -> httpx.Response:
+    return httpx.Response(
+        response.status_code,
+        headers=response.headers,
+        stream=RawStream(b"".join(response.stream)),  # type: ignore[arg-type]
+        extensions={"network_stream": FakeNetworkStream(peer)},
+    )
+
+
+async def test_connection_that_reached_a_private_address_is_refused() -> None:
+    # DNS answered with a public address for the check, but the connection itself went
+    # to the metadata address: a rebinding attack. The connected peer decides.
+    async with harness(lambda request: connected_to("169.254.169.254", html())) as h:
+        result = await h.fetch("http://rebind.test/")
+    assert result.error is not None
+    assert result.error.kind == ErrorKind.BLOCKED_ADDRESS
+    assert "169.254.169.254" in result.error.message
+
+
+async def test_redirect_hop_that_connected_to_a_private_address_is_refused() -> None:
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/start":
+            return connected_to(PUBLIC_IP, httpx.Response(302, headers={"location": "/next"}))
+        return connected_to("10.0.0.9", html())
+
+    async with harness(handle) as h:
+        result = await h.fetch("http://a.test/start")
+    assert result.error is not None
+    assert result.error.kind == ErrorKind.BLOCKED_ADDRESS
+    assert h.requests == ["http://a.test/start", "http://a.test/next"]
+
+
+async def test_connection_to_a_public_address_is_accepted() -> None:
+    async with harness(lambda request: connected_to(PUBLIC_IP, html())) as h:
+        result = await h.fetch("http://a.test/")
+    assert result.error is None
+
+
+async def test_allow_private_skips_the_connected_address_check() -> None:
+    settings = replace(SETTINGS, allow_private=True)
+    async with harness(lambda request: connected_to("127.0.0.1", html()), settings) as h:
+        result = await h.fetch("http://a.test/")
+    assert result.error is None
+
+
+def test_client_ignores_proxy_settings_from_the_environment() -> None:
+    # Through a proxy the connected peer would be the proxy, not the server.
+    assert make_client(SETTINGS).trust_env is False
+
+
 async def test_allow_private_also_follows_a_redirect_to_a_private_address() -> None:
     def handle(request: httpx.Request) -> httpx.Response:
         if request.url.host == "a.test":

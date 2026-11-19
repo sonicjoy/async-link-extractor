@@ -100,6 +100,9 @@ def make_client(
     """One shared client: a connection pool sized to the worker count."""
     return httpx.AsyncClient(
         transport=transport,
+        # No proxies from the environment: the address checks must see the real server,
+        # and a proxy would resolve names on its own.
+        trust_env=False,
         follow_redirects=True,
         max_redirects=settings.max_redirects,
         timeout=settings.timeout,
@@ -147,10 +150,14 @@ class Fetcher:
         self._sleep = sleep
         self._rng = rng
         self._clock = clock
-        # httpx calls request hooks before the first request and before every redirect
-        # hop, so each hop gets the same scheme and address checks.
+        # httpx calls request hooks before every request, redirect hops included, and
+        # response hooks after each response's headers, before its body is read. So every
+        # hop is checked twice: the resolved name before connecting, the connected peer after.
         hooks = client.event_hooks
-        client.event_hooks = {**hooks, "request": [*hooks["request"], self._check_request]}
+        client.event_hooks = {
+            "request": [*hooks["request"], self._check_request],
+            "response": [*hooks["response"], self._check_response],
+        }
 
     async def fetch(self, job: Job) -> FetchResult:
         started = self._clock()
@@ -289,6 +296,25 @@ class Fetcher:
         url = validate_url(request.url)
         if not self._settings.allow_private:
             await self._check_public(url)
+
+    async def _check_response(self, response: httpx.Response) -> None:
+        """Response hook: refuse a connection that reached a non-public address.
+
+        The request hook resolved the name itself; httpx then resolves it again to
+        connect, and a hostile DNS server can answer differently the second time (DNS
+        rebinding). The connected peer is the address that was really used. The request
+        has been sent by now, but nothing the server returned is read or written out.
+        """
+        if self._settings.allow_private:
+            return
+        stream = response.extensions.get("network_stream")
+        peer = stream.get_extra_info("server_addr") if stream is not None else None
+        if peer and not is_public(str(peer[0])):
+            raise FetchFailure(
+                ErrorKind.BLOCKED_ADDRESS,
+                f"{response.url.host} connected to non-public address {peer[0]}"
+                " (use --allow-private to permit)",
+            )
 
     async def _check_public(self, url: httpx.URL) -> None:
         host = url.host
