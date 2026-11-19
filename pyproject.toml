@@ -1,0 +1,62 @@
+[project]
+name = "linkx"
+version = "0.1.0"
+description = "Concurrent producer/consumer web link extractor built on asyncio"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Joe Luo" }]
+requires-python = ">=3.13"
+dependencies = ["httpx>=0.28,<1"]
+classifiers = [
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
+    "Framework :: AsyncIO",
+    "Environment :: Console",
+]
+
+[project.scripts]
+linkx = "linkx.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9",
+    "pytest-asyncio>=1.5",
+    "pytest-cov>=7",
+    "ruff>=0.17",
+    "mypy>=2",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["linkx"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = ["if TYPE_CHECKING:", "class .*\\(Protocol\\):", "@overload"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+extend-exclude = ["notes"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "PT", "C4", "PL"]
+ignore = ["PLR0913", "PLR2004"]
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+files = ["src", "tests"]
