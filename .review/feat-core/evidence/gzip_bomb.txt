@@ -1,14 +1,14 @@
-$ uv run python .review\feat-core\evidence\gzip_bomb.py   (at HEAD 49bf5b3)
+$ uv run python .review\feat-core\evidence\gzip_bomb.py   (at HEAD ffc8cec)
 bomb: 260934 bytes compressed, 268435456 bytes decompressed, no Content-Length
 10 jobs, 10 workers, max_bytes 1000: outcomes {<Outcome.OK: 'ok'>: 0, <Outcome.FETCH_ERROR: 'fetch_error'>: 10, <Outcome.PARSE_ERROR: 'parse_error'>: 0, <Outcome.DROPPED: 'dropped'>: 0, <Outcome.CANCELLED: 'cancelled'>: 0}
 peak traced memory: 10.9 MB
 
-$ same script against the reviewed commit 25ed227 (before the fix), in a temporary worktree
+$ same script against the reviewed commit f51d6b3 (before the fix), in a temporary worktree
 bomb: 260934 bytes compressed, 268435456 bytes decompressed, no Content-Length
 10 jobs, 10 workers, max_bytes 1000: outcomes {<Outcome.OK: 'ok'>: 0, <Outcome.FETCH_ERROR: 'fetch_error'>: 10, <Outcome.PARSE_ERROR: 'parse_error'>: 0, <Outcome.DROPPED: 'dropped'>: 0, <Outcome.CANCELLED: 'cancelled'>: 0}
 peak traced memory: 737.1 MB
 
-# Re-run at HEAD b8ff835 after fix round 2
+# Re-run at HEAD a7695ac after fix round 2
 bomb: 260934 bytes compressed, 268435456 bytes decompressed, no Content-Length
 10 jobs, 10 workers, max_bytes 1000: outcomes {<Outcome.OK: 'ok'>: 0, <Outcome.FETCH_ERROR: 'fetch_error'>: 10, <Outcome.PARSE_ERROR: 'parse_error'>: 0, <Outcome.DROPPED: 'dropped'>: 0, <Outcome.CANCELLED: 'cancelled'>: 0}
 peak traced memory: 10.9 MB

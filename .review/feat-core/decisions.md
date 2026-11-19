@@ -47,20 +47,20 @@
 
 | Question | Answer | Done in |
 |---|---|---|
-| DNS rebinding and environment proxies (security HIGH, LOW) | Check the connected IP in a response hook; `trust_env=False` | 32c069c |
-| Design wording to match the code (correctness drift table, 8 rows) | Update the design | 5733556, plus the redirect-following sentence in 87700d9 and fix-set-3 wording in 1591d2c |
-| The connected-IP check fails open when the peer address cannot be read (fix review round 2, MAJOR, at the two-round cap) | Fail closed | ca5e3a3 |
-| Four minors from fix review round 2 | Fix all four | ca5e3a3, 1591d2c |
+| DNS rebinding and environment proxies (security HIGH, LOW) | Check the connected IP in a response hook; `trust_env=False` | a36f258 |
+| Design wording to match the code (correctness drift table, 8 rows) | Update the design | 4416694, plus the redirect-following sentence in aae8f30 and fix-set-3 wording in d361b88 |
+| The connected-IP check fails open when the peer address cannot be read (fix review round 2, MAJOR, at the two-round cap) | Fail closed | 9107b20 |
+| Four minors from fix review round 2 | Fix all four | 9107b20, d361b88 |
 
 ## Fix review round 1 findings (fixed in round 2)
 
 | Finding | Action |
 |---|---|
-| MAJOR: redirect bodies bypass the size cap (httpx reads 3xx bodies) | linkx follows redirects itself and closes each 3xx unread (87700d9) |
-| MAJOR: the sink's failure flag hides the real output error | `OutputFailed` chained to the first failure; CLI reports the first non-refusal (b8ff835) |
-| MINOR: huge integer option crashes `math.isfinite` | finite check on floats only (b8ff835); upper bounds later (1591d2c) |
-| MINOR: `idna` / `undefined` charsets still fail | fallback also catches ValueError; test over every codec name (87700d9) |
-| MINOR: untested load-bearing lines | tests for `_inflate` +1 and for Ctrl-C during `Sink.close` (87700d9, b8ff835) |
+| MAJOR: redirect bodies bypass the size cap (httpx reads 3xx bodies) | linkx follows redirects itself and closes each 3xx unread (aae8f30) |
+| MAJOR: the sink's failure flag hides the real output error | `OutputFailed` chained to the first failure; CLI reports the first non-refusal (a7695ac) |
+| MINOR: huge integer option crashes `math.isfinite` | finite check on floats only (a7695ac); upper bounds later (d361b88) |
+| MINOR: `idna` / `undefined` charsets still fail | fallback also catches ValueError; test over every codec name (aae8f30) |
+| MINOR: untested load-bearing lines | tests for `_inflate` +1 and for Ctrl-C during `Sink.close` (aae8f30, a7695ac) |
 | MINOR: Ctrl-C during the HTTP client's close loses the summary | decide and record: left open; records are complete by then; ledger follow-up |
 | MINOR: input error message for a non-UTF-8 file does not name the file | note and skip: ledger follow-up |
 | MINOR: a late interrupt log line after the run ends | note and skip: ledger follow-up |
@@ -70,11 +70,11 @@
 
 | Finding | Action |
 |---|---|
-| MAJOR: peer check fails open when the address cannot be read | fail closed (ca5e3a3); reproduced over real sockets: 40 of 40 leaked before, 40 of 40 refused after |
-| MINOR: `trust_env=False` also ignores `SSL_CERT_FILE` / `SSL_CERT_DIR`, undocumented | README and design say so (1591d2c) |
-| MINOR: `--max-bytes` ≥ 2^63 breaks zlib; huge `--concurrency` exhausts memory | upper bounds on every numeric option (1591d2c) |
-| MINOR: design row 1 was wrong: a `javascript:` redirect gives `InvalidURL` | mapped to `invalid_url`, design corrected (ca5e3a3, 1591d2c) |
-| MINOR: no test fails if 3xx responses stop being closed | end-to-end test with one worker (ca5e3a3) |
+| MAJOR: peer check fails open when the address cannot be read | fail closed (9107b20); reproduced over real sockets: 40 of 40 leaked before, 40 of 40 refused after |
+| MINOR: `trust_env=False` also ignores `SSL_CERT_FILE` / `SSL_CERT_DIR`, undocumented | README and design say so (d361b88) |
+| MINOR: `--max-bytes` ≥ 2^63 breaks zlib; huge `--concurrency` exhausts memory | upper bounds on every numeric option (d361b88) |
+| MINOR: design row 1 was wrong: a `javascript:` redirect gives `InvalidURL` | mapped to `invalid_url`, design corrected (9107b20, d361b88) |
+| MINOR: no test fails if 3xx responses stop being closed | end-to-end test with one worker (9107b20) |
 
 ## Decisions made (fix sets 2 and 3)
 
@@ -87,9 +87,9 @@
 
 | Finding | Action |
 |---|---|
-| MINOR: an unreadable address was reported as "non-public" with an `--allow-private` hint | its own "could not confirm" message, no hint (26f47a7) |
-| MINOR: README options table split by the bounds paragraph | paragraph moved below the table (26f47a7) |
-| Nits: upper-bound tests ran `main()` and would hang on a regression; docstring, design sentence, test count; a mutant targeted the wrong line | tests parse only; wording fixed; mutant retargeted and re-run (26f47a7) |
+| MINOR: an unreadable address was reported as "non-public" with an `--allow-private` hint | its own "could not confirm" message, no hint (53c50a5) |
+| MINOR: README options table split by the bounds paragraph | paragraph moved below the table (53c50a5) |
+| Nits: upper-bound tests ran `main()` and would hang on a regression; docstring, design sentence, test count; a mutant targeted the wrong line | tests parse only; wording fixed; mutant retargeted and re-run (53c50a5) |
 
 ## Fix review round 4
 

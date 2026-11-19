@@ -24,7 +24,7 @@ exit=130
   outcomes: ok 3, fetch_error 0, parse_error 0, dropped 0, cancelled 4
 
 
-# Re-run at HEAD 49bf5b3 after fix round 1
+# Re-run at HEAD ffc8cec after fix round 1
 Python 3.15.2
 === scenario 1: one Ctrl-C while one fetch is stuck ===
 exit=130
@@ -50,7 +50,7 @@ exit=130
   outcomes: ok 3, fetch_error 0, parse_error 0, dropped 0, cancelled 4
 
 
-# Re-run at HEAD b8ff835 after fix round 2
+# Re-run at HEAD a7695ac after fix round 2
 Python 3.15.2
 === scenario 1: one Ctrl-C while one fetch is stuck ===
 exit=130
@@ -76,7 +76,7 @@ exit=130
   outcomes: ok 3, fetch_error 0, parse_error 0, dropped 0, cancelled 4
 
 
-# Re-run at HEAD 1591d2c after fix set 3
+# Re-run at HEAD d361b88 after fix set 3
 Python 3.15.2
 === scenario 1: one Ctrl-C while one fetch is stuck ===
 exit=130

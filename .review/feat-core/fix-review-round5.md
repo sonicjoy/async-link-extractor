@@ -17,7 +17,7 @@
 None. (Note, not a finding: `v10.3.3` and `v7.0.x` were chosen as the exact patch tags; I did not check they are the latest releases, only that they exist and the SHAs match.)
 
 ## Unclaimed changes
-None. `git diff 27c7ed5..HEAD --stat`: `.github/workflows/ci.yml` (3 lines changed) and `.review/LEDGER.md` (1 row). The ci.yml diff has exactly 3 removed and 3 added lines, each only the `uses:` line. The ledger row changed only in its status column.
+None. `git diff ce85b02..HEAD --stat`: `.github/workflows/ci.yml` (3 lines changed) and `.review/LEDGER.md` (1 row). The ci.yml diff has exactly 3 removed and 3 added lines, each only the `uses:` line. The ledger row changed only in its status column.
 
 ## Workflow validity
 YAML parses (PyYAML). Top-level `permissions: {contents: read}` unchanged; same steps, names, `with:` inputs, matrix and conditions. Not run on GitHub Actions by me.

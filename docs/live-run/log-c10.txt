@@ -1,0 +1,282 @@
+23:44:15 INFO    start: 1000 jobs (duplicates skipped: 0), workers 10, consumers 1, queue 100 (drop-oldest)
+23:44:16 WARNING [#15] attempt 1 failed (http_status: HTTP 429); retrying in 0.45s
+23:44:16 WARNING [#1] attempt 1 failed (http_status: HTTP 429); retrying in 0.42s
+23:44:17 WARNING [#15] attempt 2 failed (http_status: HTTP 429); retrying in 0.48s
+23:44:17 WARNING [#16] attempt 1 failed (http_status: HTTP 429); retrying in 0.06s
+23:44:18 WARNING [#2] attempt 1 failed (http_status: HTTP 429); retrying in 0.40s
+23:44:18 WARNING [#16] attempt 2 failed (http_status: HTTP 429); retrying in 1.09s
+23:44:19 WARNING [#1] attempt 2 failed (http_status: HTTP 429); retrying in 0.62s
+23:44:20 WARNING [#2] attempt 2 failed (http_status: HTTP 429); retrying in 1.60s
+23:44:20 WARNING [#55] attempt 1 failed (http_status: HTTP 502); retrying in 0.02s
+23:44:20 INFO    progress: 52/1000 done, 10 in flight, queue 0, dropped 0
+23:44:21 WARNING [#65] attempt 1 failed (connect: cannot resolve speakingjs.com: [Errno 11002] getaddrinfo failed); retrying in 0.38s
+23:44:21 WARNING [#55] attempt 2 failed (http_status: HTTP 502); retrying in 0.87s
+23:44:21 WARNING [#70] attempt 1 failed (http_status: HTTP 429); retrying in 0.86s
+23:44:22 WARNING [#65] attempt 2 failed (connect: cannot resolve speakingjs.com: [Errno 11002] getaddrinfo failed); retrying in 1.92s
+23:44:22 WARNING [#48] attempt 1 failed (connect: ConnectError: All connection attempts failed); retrying in 0.94s
+23:44:22 WARNING [#70] attempt 2 failed (http_status: HTTP 429); retrying in 0.41s
+23:44:24 WARNING [#99] attempt 1 failed (connect: cannot resolve internetgames.about.com: [Errno 11001] getaddrinfo failed); retrying in 0.64s
+23:44:24 WARNING [#100] attempt 1 failed (connect: cannot resolve science2017.globalchange.gov: [Errno 11001] getaddrinfo failed); retrying in 0.89s
+23:44:24 WARNING [#102] attempt 1 failed (connect: cannot resolve webbrowsersintroduction.com: [Errno 11001] getaddrinfo failed); retrying in 0.79s
+23:44:24 WARNING [#107] attempt 1 failed (http_status: HTTP 429); retrying in 0.67s
+23:44:24 WARNING [#109] attempt 1 failed (connect: cannot resolve ben.web.cern.ch: [Errno 11001] getaddrinfo failed); retrying in 0.54s
+23:44:25 WARNING [#100] attempt 2 failed (connect: cannot resolve science2017.globalchange.gov: [Errno 11001] getaddrinfo failed); retrying in 1.32s
+23:44:25 WARNING [#99] attempt 2 failed (connect: cannot resolve internetgames.about.com: [Errno 11001] getaddrinfo failed); retrying in 1.34s
+23:44:25 WARNING [#102] attempt 2 failed (connect: cannot resolve webbrowsersintroduction.com: [Errno 11001] getaddrinfo failed); retrying in 1.56s
+23:44:25 WARNING [#48] attempt 2 failed (connect: ConnectError: All connection attempts failed); retrying in 0.87s
+23:44:25 WARNING [#109] attempt 2 failed (connect: cannot resolve ben.web.cern.ch: [Errno 11001] getaddrinfo failed); retrying in 0.01s
+23:44:25 WARNING [#107] attempt 2 failed (http_status: HTTP 429); retrying in 1.14s
+23:44:25 INFO    progress: 108/1000 done, 10 in flight, queue 0, dropped 0
+23:44:26 WARNING [#117] attempt 1 failed (http_status: HTTP 429); retrying in 0.13s
+23:44:26 WARNING [#63] attempt 1 failed (connect: ReadError); retrying in 0.81s
+23:44:27 WARNING [#117] attempt 2 failed (http_status: HTTP 429); retrying in 0.12s
+23:44:27 WARNING [#135] attempt 1 failed (http_status: HTTP 429); retrying in 0.06s
+23:44:28 WARNING [#135] attempt 2 failed (http_status: HTTP 429); retrying in 0.14s
+23:44:29 WARNING [#63] attempt 2 failed (connect: ReadError); retrying in 1.84s
+23:44:29 WARNING [#130] attempt 1 failed (http_status: HTTP 429); retrying in 0.86s
+23:44:30 WARNING [#153] attempt 1 failed (http_status: HTTP 429); retrying in 0.26s
+23:44:30 WARNING [#160] attempt 1 failed (connect: cannot resolve www2.bc.edu: [Errno 11001] getaddrinfo failed); retrying in 0.17s
+23:44:30 WARNING [#153] attempt 2 failed (http_status: HTTP 429); retrying in 1.39s
+23:44:30 INFO    progress: 154/1000 done, 10 in flight, queue 0, dropped 0
+23:44:31 WARNING [#160] attempt 2 failed (connect: cannot resolve www2.bc.edu: [Errno 11001] getaddrinfo failed); retrying in 0.88s
+23:44:31 WARNING [#167] attempt 1 failed (http_status: HTTP 429); retrying in 0.37s
+23:44:31 WARNING [#168] attempt 1 failed (connect: cannot resolve news.zdnet.com: [Errno 11001] getaddrinfo failed); retrying in 0.81s
+23:44:31 WARNING [#130] attempt 2 failed (http_status: HTTP 429); retrying in 1.39s
+23:44:32 WARNING [#167] attempt 2 failed (http_status: HTTP 429); retrying in 0.64s
+23:44:32 WARNING [#168] attempt 2 failed (connect: cannot resolve news.zdnet.com: [Errno 11001] getaddrinfo failed); retrying in 0.85s
+23:44:33 WARNING [#184] attempt 1 failed (connect: cannot resolve tenyears-www.web.cern.ch: [Errno 11001] getaddrinfo failed); retrying in 0.94s
+23:44:34 WARNING [#184] attempt 2 failed (connect: cannot resolve tenyears-www.web.cern.ch: [Errno 11001] getaddrinfo failed); retrying in 0.59s
+23:44:35 WARNING [#205] attempt 1 failed (connect: cannot resolve www10.org: [Errno 11001] getaddrinfo failed); retrying in 0.37s
+23:44:35 INFO    progress: 198/1000 done, 10 in flight, queue 0, dropped 0
+23:44:36 WARNING [#205] attempt 2 failed (connect: cannot resolve www10.org: [Errno 11001] getaddrinfo failed); retrying in 0.32s
+23:44:38 WARNING [#169] attempt 1 failed (connect: ReadError); retrying in 0.80s
+23:44:38 WARNING [#207] attempt 1 failed (connect: ConnectError: All connection attempts failed); retrying in 0.53s
+23:44:39 WARNING [#240] attempt 1 failed (http_status: HTTP 429); retrying in 0.45s
+23:44:39 WARNING [#252] attempt 1 failed (connect: cannot resolve blogs.cgdev.org: [Errno 11001] getaddrinfo failed); retrying in 0.36s
+23:44:39 WARNING [#240] attempt 2 failed (http_status: HTTP 429); retrying in 1.74s
+23:44:40 WARNING [#254] attempt 1 failed (http_status: HTTP 429); retrying in 0.59s
+23:44:40 INFO    progress: 248/1000 done, 10 in flight, queue 0, dropped 0
+23:44:40 WARNING [#252] attempt 2 failed (connect: cannot resolve blogs.cgdev.org: [Errno 11001] getaddrinfo failed); retrying in 1.44s
+23:44:41 WARNING [#207] attempt 2 failed (connect: ConnectError: All connection attempts failed); retrying in 1.36s
+23:44:41 WARNING [#254] attempt 2 failed (http_status: HTTP 429); retrying in 0.46s
+23:44:41 WARNING [#126] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.91s
+23:44:43 WARNING [#279] attempt 1 failed (connect: cannot resolve 12mars.rsf.org: [Errno 11001] getaddrinfo failed); retrying in 0.44s
+23:44:43 WARNING [#281] attempt 1 failed (http_status: HTTP 429); retrying in 0.51s
+23:44:44 WARNING [#279] attempt 2 failed (connect: cannot resolve 12mars.rsf.org: [Errno 11001] getaddrinfo failed); retrying in 1.62s
+23:44:44 WARNING [#281] attempt 2 failed (http_status: HTTP 429); retrying in 0.83s
+23:44:44 WARNING [#169] attempt 2 failed (connect: ReadError); retrying in 1.53s
+23:44:45 WARNING [#289] attempt 1 failed (connect: RemoteProtocolError: peer closed connection without sending complete message body (incomplete chunked read)); retrying in 0.70s
+23:44:45 INFO    progress: 290/1000 done, 10 in flight, queue 0, dropped 0
+23:44:47 WARNING [#289] attempt 2 failed (connect: RemoteProtocolError: peer closed connection without sending complete message body (incomplete chunked read)); retrying in 1.02s
+23:44:48 WARNING [#310] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1147)); retrying in 0.73s
+23:44:49 WARNING [#310] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1147)); retrying in 0.36s
+23:44:50 INFO    progress: 340/1000 done, 10 in flight, queue 0, dropped 0
+23:44:53 WARNING [#378] attempt 1 failed (http_status: HTTP 429); retrying in 0.44s
+23:44:53 WARNING [#239] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.56s
+23:44:54 WARNING [#378] attempt 2 failed (http_status: HTTP 429); retrying in 0.28s
+23:44:55 WARNING [#386] attempt 1 failed (connect: cannot resolve programming.linux.com: [Errno 11001] getaddrinfo failed); retrying in 0.41s
+23:44:55 INFO    progress: 378/1000 done, 10 in flight, queue 0, dropped 0
+23:44:56 WARNING [#260] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.63s
+23:44:56 WARNING [#386] attempt 2 failed (connect: cannot resolve programming.linux.com: [Errno 11001] getaddrinfo failed); retrying in 0.18s
+23:44:57 WARNING [#389] attempt 1 failed (http_status: HTTP 429); retrying in 0.69s
+23:44:57 WARNING [#126] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.37s
+23:44:57 WARNING [#389] attempt 2 failed (http_status: HTTP 429); retrying in 1.06s
+23:44:59 WARNING [#290] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.38s
+23:45:00 INFO    progress: 398/1000 done, 10 in flight, queue 0, dropped 0
+23:45:00 WARNING [#407] attempt 1 failed (http_status: HTTP 429); retrying in 0.08s
+23:45:01 WARNING [#407] attempt 2 failed (http_status: HTTP 429); retrying in 1.34s
+23:45:04 WARNING [#415] attempt 1 failed (http_status: HTTP 429); retrying in 0.38s
+23:45:05 WARNING [#415] attempt 2 failed (http_status: HTTP 429); retrying in 1.32s
+23:45:05 INFO    progress: 417/1000 done, 10 in flight, queue 0, dropped 0
+23:45:06 WARNING [#431] attempt 1 failed (connect: cannot resolve eval.symantec.com: [Errno 11001] getaddrinfo failed); retrying in 0.27s
+23:45:07 WARNING [#431] attempt 2 failed (connect: cannot resolve eval.symantec.com: [Errno 11001] getaddrinfo failed); retrying in 1.60s
+23:45:08 WARNING [#379] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.94s
+23:45:09 WARNING [#382] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.91s
+23:45:09 WARNING [#383] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.79s
+23:45:09 WARNING [#239] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 1.57s
+23:45:10 WARNING [#448] attempt 1 failed (connect: cannot resolve science2017.globalchange.gov: [Errno 11001] getaddrinfo failed); retrying in 0.72s
+23:45:10 INFO    progress: 441/1000 done, 10 in flight, queue 0, dropped 0
+23:45:11 WARNING [#448] attempt 2 failed (connect: cannot resolve science2017.globalchange.gov: [Errno 11001] getaddrinfo failed); retrying in 0.66s
+23:45:12 WARNING [#260] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.05s
+23:45:14 WARNING [#472] attempt 1 failed (connect: cannot resolve science2017.globalchange.gov: [Errno 11001] getaddrinfo failed); retrying in 0.23s
+23:45:15 WARNING [#290] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 1.51s
+23:45:15 WARNING [#476] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'globalsportmatters.com'. (_ssl.c:1147)); retrying in 0.40s
+23:45:15 WARNING [#472] attempt 2 failed (connect: cannot resolve science2017.globalchange.gov: [Errno 11001] getaddrinfo failed); retrying in 0.86s
+23:45:15 INFO    progress: 470/1000 done, 10 in flight, queue 0, dropped 0
+23:45:16 WARNING [#476] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'globalsportmatters.com'. (_ssl.c:1147)); retrying in 0.28s
+23:45:17 WARNING [#488] attempt 1 failed (connect: cannot resolve internetgames.about.com: [Errno 11001] getaddrinfo failed); retrying in 0.33s
+23:45:17 WARNING [#489] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'www.apacheweek.com'. (_ssl.c:1147)); retrying in 0.85s
+23:45:17 WARNING [#490] attempt 1 failed (http_status: HTTP 502); retrying in 0.11s
+23:45:18 WARNING [#488] attempt 2 failed (connect: cannot resolve internetgames.about.com: [Errno 11001] getaddrinfo failed); retrying in 1.03s
+23:45:18 WARNING [#490] attempt 2 failed (http_status: HTTP 502); retrying in 1.63s
+23:45:18 WARNING [#489] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'www.apacheweek.com'. (_ssl.c:1147)); retrying in 0.91s
+23:45:20 INFO    progress: 487/1000 done, 10 in flight, queue 0, dropped 0
+23:45:24 WARNING [#379] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 1.73s
+23:45:25 WARNING [#382] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 1.08s
+23:45:25 WARNING [#383] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.19s
+23:45:25 INFO    progress: 496/1000 done, 10 in flight, queue 0, dropped 0
+23:45:27 WARNING [#512] attempt 1 failed (connect: cannot resolve elk.informatik.hs-augsburg.de: [Errno 11001] getaddrinfo failed); retrying in 0.81s
+23:45:28 WARNING [#512] attempt 2 failed (connect: cannot resolve elk.informatik.hs-augsburg.de: [Errno 11001] getaddrinfo failed); retrying in 0.52s
+23:45:31 INFO    progress: 519/1000 done, 10 in flight, queue 0, dropped 0
+23:45:31 WARNING [#534] attempt 1 failed (connect: cannot resolve vigna.dsi.unimi.it: [Errno 11001] getaddrinfo failed); retrying in 0.82s
+23:45:32 WARNING [#534] attempt 2 failed (connect: cannot resolve vigna.dsi.unimi.it: [Errno 11001] getaddrinfo failed); retrying in 1.34s
+23:45:32 WARNING [#487] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.54s
+23:45:34 WARNING [#546] attempt 1 failed (connect: cannot resolve strikingeagles.tripod.com: [Errno 11001] getaddrinfo failed); retrying in 0.91s
+23:45:35 WARNING [#546] attempt 2 failed (connect: cannot resolve strikingeagles.tripod.com: [Errno 11001] getaddrinfo failed); retrying in 0.86s
+23:45:35 WARNING [#549] attempt 1 failed (http_status: HTTP 500); retrying in 0.05s
+23:45:36 INFO    progress: 541/1000 done, 10 in flight, queue 0, dropped 0
+23:45:36 WARNING [#549] attempt 2 failed (http_status: HTTP 500); retrying in 1.71s
+23:45:36 WARNING [#499] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.86s
+23:45:37 WARNING [#502] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.62s
+23:45:37 WARNING [#553] attempt 1 failed (connect: cannot resolve cis.poly.edu: [Errno 11001] getaddrinfo failed); retrying in 0.56s
+23:45:37 WARNING [#550] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'www.internetworldstats.com'. (_ssl.c:1147)); retrying in 0.64s
+23:45:38 WARNING [#553] attempt 2 failed (connect: cannot resolve cis.poly.edu: [Errno 11001] getaddrinfo failed); retrying in 0.41s
+23:45:41 INFO    progress: 552/1000 done, 10 in flight, queue 0, dropped 0
+23:45:41 WARNING [#564] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1147)); retrying in 0.77s
+23:45:41 WARNING [#550] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'www.internetworldstats.com'. (_ssl.c:1147)); retrying in 1.63s
+23:45:42 WARNING [#564] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1147)); retrying in 1.58s
+23:45:43 WARNING [#585] attempt 1 failed (http_status: HTTP 429); retrying in 0.49s
+23:45:44 WARNING [#585] attempt 2 failed (http_status: HTTP 429); retrying in 0.13s
+23:45:44 WARNING [#592] attempt 1 failed (connect: cannot resolve ftp.cuhk.edu.hk: [Errno 11001] getaddrinfo failed); retrying in 0.40s
+23:45:45 WARNING [#595] attempt 1 failed (http_status: HTTP 429); retrying in 0.79s
+23:45:45 WARNING [#598] attempt 1 failed (connect: cannot resolve www10.org: [Errno 11001] getaddrinfo failed); retrying in 0.36s
+23:45:45 WARNING [#592] attempt 2 failed (connect: cannot resolve ftp.cuhk.edu.hk: [Errno 11001] getaddrinfo failed); retrying in 1.26s
+23:45:45 WARNING [#584] attempt 1 failed (connect: ConnectError: All connection attempts failed); retrying in 0.08s
+23:45:46 INFO    progress: 590/1000 done, 10 in flight, queue 0, dropped 0
+23:45:46 WARNING [#595] attempt 2 failed (http_status: HTTP 429); retrying in 1.38s
+23:45:46 WARNING [#598] attempt 2 failed (connect: cannot resolve www10.org: [Errno 11001] getaddrinfo failed); retrying in 0.16s
+23:45:47 WARNING [#538] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.39s
+23:45:48 WARNING [#487] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.70s
+23:45:48 WARNING [#584] attempt 2 failed (connect: ConnectError: All connection attempts failed); retrying in 0.99s
+23:45:51 INFO    progress: 616/1000 done, 10 in flight, queue 0, dropped 0
+23:45:52 WARNING [#499] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.79s
+23:45:52 WARNING [#633] attempt 1 failed (http_status: HTTP 429); retrying in 0.89s
+23:45:52 WARNING [#637] attempt 1 failed (http_status: HTTP 429); retrying in 0.52s
+23:45:52 WARNING [#502] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 1.04s
+23:45:53 WARNING [#633] attempt 2 failed (http_status: HTTP 429); retrying in 1.08s
+23:45:53 WARNING [#637] attempt 2 failed (http_status: HTTP 429); retrying in 0.35s
+23:45:54 WARNING [#644] attempt 1 failed (http_status: HTTP 429); retrying in 0.36s
+23:45:55 WARNING [#644] attempt 2 failed (http_status: HTTP 429); retrying in 0.31s
+23:45:56 INFO    progress: 642/1000 done, 10 in flight, queue 0, dropped 0
+23:45:56 WARNING [#655] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1147)); retrying in 0.96s
+23:45:58 WARNING [#655] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1147)); retrying in 0.08s
+23:45:59 WARNING [#670] attempt 1 failed (http_status: HTTP 429); retrying in 0.35s
+23:46:00 WARNING [#596] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.07s
+23:46:00 WARNING [#670] attempt 2 failed (http_status: HTTP 429); retrying in 1.20s
+23:46:01 INFO    progress: 669/1000 done, 10 in flight, queue 0, dropped 0
+23:46:01 WARNING [#682] attempt 1 failed (connect: cannot resolve www.cindoc.csic.es: [Errno 11001] getaddrinfo failed); retrying in 0.10s
+23:46:02 WARNING [#686] attempt 1 failed (http_status: HTTP 429); retrying in 0.73s
+23:46:02 WARNING [#682] attempt 2 failed (connect: cannot resolve www.cindoc.csic.es: [Errno 11001] getaddrinfo failed); retrying in 1.22s
+23:46:03 WARNING [#538] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.88s
+23:46:03 WARNING [#686] attempt 2 failed (http_status: HTTP 429); retrying in 1.21s
+23:46:06 INFO    progress: 706/1000 done, 10 in flight, queue 0, dropped 0
+23:46:06 WARNING [#712] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1147)); retrying in 0.22s
+23:46:07 WARNING [#712] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate (_ssl.c:1147)); retrying in 0.09s
+23:46:07 WARNING [#722] attempt 1 failed (http_status: HTTP 429); retrying in 0.33s
+23:46:08 WARNING [#722] attempt 2 failed (http_status: HTTP 429); retrying in 0.42s
+23:46:10 WARNING [#744] attempt 1 failed (connect: cannot resolve www.theatlanticcities.com: [Errno 11001] getaddrinfo failed); retrying in 0.44s
+23:46:11 INFO    progress: 740/1000 done, 10 in flight, queue 0, dropped 0
+23:46:11 WARNING [#750] attempt 1 failed (connect: cannot resolve www.nrel.gov: [Errno 11001] getaddrinfo failed); retrying in 0.80s
+23:46:11 WARNING [#744] attempt 2 failed (connect: cannot resolve www.theatlanticcities.com: [Errno 11001] getaddrinfo failed); retrying in 1.88s
+23:46:12 WARNING [#659] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.22s
+23:46:12 WARNING [#750] attempt 2 failed (connect: cannot resolve www.nrel.gov: [Errno 11001] getaddrinfo failed); retrying in 1.10s
+23:46:12 WARNING [#739] attempt 1 failed (connect: ConnectError: All connection attempts failed); retrying in 0.57s
+23:46:13 WARNING [#764] attempt 1 failed (connect: cannot resolve files.leagueathletics.com: [Errno 11002] getaddrinfo failed); retrying in 0.91s
+23:46:14 WARNING [#769] attempt 1 failed (connect: cannot resolve oa.doria.fi: [Errno 11001] getaddrinfo failed); retrying in 0.34s
+23:46:14 WARNING [#764] attempt 2 failed (connect: cannot resolve files.leagueathletics.com: [Errno 11002] getaddrinfo failed); retrying in 1.41s
+23:46:15 WARNING [#596] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.81s
+23:46:15 WARNING [#769] attempt 2 failed (connect: cannot resolve oa.doria.fi: [Errno 11001] getaddrinfo failed); retrying in 0.57s
+23:46:15 WARNING [#739] attempt 2 failed (connect: ConnectError: All connection attempts failed); retrying in 0.03s
+23:46:16 INFO    progress: 766/1000 done, 10 in flight, queue 0, dropped 0
+23:46:17 WARNING [#781] attempt 1 failed (connect: cannot resolve vigna.dsi.unimi.it: [Errno 11001] getaddrinfo failed); retrying in 0.49s
+23:46:17 WARNING [#767] attempt 1 failed (connect: ConnectError: All connection attempts failed); retrying in 0.60s
+23:46:18 WARNING [#783] attempt 1 failed (http_status: HTTP 522); retrying in 0.18s
+23:46:18 WARNING [#781] attempt 2 failed (connect: cannot resolve vigna.dsi.unimi.it: [Errno 11001] getaddrinfo failed); retrying in 1.39s
+23:46:19 WARNING [#783] attempt 2 failed (http_status: HTTP 522); retrying in 1.66s
+23:46:19 WARNING [#698] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.43s
+23:46:21 INFO    progress: 783/1000 done, 10 in flight, queue 0, dropped 0
+23:46:21 WARNING [#767] attempt 2 failed (connect: ConnectError: All connection attempts failed); retrying in 1.24s
+23:46:22 WARNING [#795] attempt 1 failed (http_status: HTTP 502); retrying in 0.62s
+23:46:23 WARNING [#795] attempt 2 failed (http_status: HTTP 502); retrying in 0.21s
+23:46:24 WARNING [#798] attempt 1 failed (http_status: HTTP 429); retrying in 0.38s
+23:46:25 WARNING [#798] attempt 2 failed (http_status: HTTP 429); retrying in 1.66s
+23:46:26 INFO    progress: 791/1000 done, 10 in flight, queue 0, dropped 0
+23:46:27 WARNING [#659] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 1.55s
+23:46:27 WARNING [#806] attempt 1 failed (connect: cannot resolve science2017.globalchange.gov: [Errno 11001] getaddrinfo failed); retrying in 0.98s
+23:46:28 WARNING [#806] attempt 2 failed (connect: cannot resolve science2017.globalchange.gov: [Errno 11001] getaddrinfo failed); retrying in 1.34s
+23:46:29 WARNING [#771] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.30s
+23:46:29 WARNING [#818] attempt 1 failed (connect: cannot resolve 12mars.rsf.org: [Errno 11001] getaddrinfo failed); retrying in 0.51s
+23:46:30 WARNING [#818] attempt 2 failed (connect: cannot resolve 12mars.rsf.org: [Errno 11001] getaddrinfo failed); retrying in 1.82s
+23:46:31 INFO    progress: 814/1000 done, 10 in flight, queue 0, dropped 0
+23:46:31 WARNING [#824] attempt 1 failed (connect: cannot resolve dictionary.reference.com: [Errno 11001] getaddrinfo failed); retrying in 0.15s
+23:46:31 WARNING [#778] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.02s
+23:46:32 WARNING [#824] attempt 2 failed (connect: cannot resolve dictionary.reference.com: [Errno 11001] getaddrinfo failed); retrying in 1.59s
+23:46:33 WARNING [#823] attempt 1 failed (connect: ConnectError: All connection attempts failed); retrying in 0.66s
+23:46:34 WARNING [#787] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.11s
+23:46:34 WARNING [#789] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.86s
+23:46:35 WARNING [#698] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 1.92s
+23:46:36 INFO    progress: 836/1000 done, 10 in flight, queue 0, dropped 0
+23:46:37 WARNING [#823] attempt 2 failed (connect: ConnectError: All connection attempts failed); retrying in 1.53s
+23:46:41 INFO    progress: 850/1000 done, 10 in flight, queue 0, dropped 0
+23:46:44 WARNING [#771] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.47s
+23:46:46 INFO    progress: 871/1000 done, 10 in flight, queue 0, dropped 0
+23:46:46 WARNING [#778] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 1.08s
+23:46:48 WARNING [#889] attempt 1 failed (connect: cannot resolve pub.turre.com: [Errno 11001] getaddrinfo failed); retrying in 0.40s
+23:46:49 WARNING [#787] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.55s
+23:46:49 WARNING [#889] attempt 2 failed (connect: cannot resolve pub.turre.com: [Errno 11001] getaddrinfo failed); retrying in 0.84s
+23:46:50 WARNING [#789] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 1.63s
+23:46:51 INFO    progress: 889/1000 done, 10 in flight, queue 0, dropped 0
+23:46:54 WARNING [#912] attempt 1 failed (connect: cannot resolve www.footballnetwork.org: [Errno 11002] getaddrinfo failed); retrying in 0.10s
+23:46:55 WARNING [#912] attempt 2 failed (connect: cannot resolve www.footballnetwork.org: [Errno 11002] getaddrinfo failed); retrying in 1.16s
+23:46:56 INFO    progress: 907/1000 done, 10 in flight, queue 0, dropped 0
+23:46:57 WARNING [#867] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.83s
+23:46:58 WARNING [#871] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.82s
+23:47:00 WARNING [#934] attempt 1 failed (http_status: HTTP 503); retrying in 0.94s
+23:47:01 INFO    progress: 927/1000 done, 10 in flight, queue 0, dropped 0
+23:47:01 WARNING [#881] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.60s
+23:47:01 WARNING [#934] attempt 2 failed (http_status: HTTP 503); retrying in 0.29s
+23:47:03 WARNING [#944] attempt 1 failed (http_status: HTTP 429); retrying in 0.91s
+23:47:04 WARNING [#948] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'blogs.adobe.com'. (_ssl.c:1147)); retrying in 0.42s
+23:47:04 WARNING [#944] attempt 2 failed (http_status: HTTP 429); retrying in 1.93s
+23:47:05 WARNING [#948] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'blogs.adobe.com'. (_ssl.c:1147)); retrying in 0.59s
+23:47:06 INFO    progress: 945/1000 done, 10 in flight, queue 0, dropped 0
+23:47:07 WARNING [#959] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'www.aglc.gov.ab.ca'. (_ssl.c:1147)); retrying in 0.54s
+23:47:07 WARNING [#960] attempt 1 failed (connect: cannot resolve www.ir.uwaterloo.ca: [Errno 11001] getaddrinfo failed); retrying in 0.15s
+23:47:07 WARNING [#958] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1147)); retrying in 0.94s
+23:47:08 WARNING [#959] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'www.aglc.gov.ab.ca'. (_ssl.c:1147)); retrying in 1.45s
+23:47:08 WARNING [#960] attempt 2 failed (connect: cannot resolve www.ir.uwaterloo.ca: [Errno 11001] getaddrinfo failed); retrying in 1.82s
+23:47:08 WARNING [#908] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.95s
+23:47:09 WARNING [#958] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: certificate has expired (_ssl.c:1147)); retrying in 0.38s
+23:47:10 WARNING [#963] attempt 1 failed (connect: cannot resolve www.linux-watch.com: [Errno 11001] getaddrinfo failed); retrying in 0.44s
+23:47:11 WARNING [#963] attempt 2 failed (connect: cannot resolve www.linux-watch.com: [Errno 11001] getaddrinfo failed); retrying in 0.36s
+23:47:11 WARNING [#970] attempt 1 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'webcookies.org'. (_ssl.c:1147)); retrying in 0.69s
+23:47:11 INFO    progress: 961/1000 done, 10 in flight, queue 0, dropped 0
+23:47:11 WARNING [#972] attempt 1 failed (connect: cannot resolve www.caselaw.lp.findlaw.com: [Errno 11001] getaddrinfo failed); retrying in 0.48s
+23:47:12 WARNING [#970] attempt 2 failed (connect: ConnectError: [SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: Hostname mismatch, certificate is not valid for 'webcookies.org'. (_ssl.c:1147)); retrying in 1.41s
+23:47:12 WARNING [#972] attempt 2 failed (connect: cannot resolve www.caselaw.lp.findlaw.com: [Errno 11001] getaddrinfo failed); retrying in 0.89s
+23:47:13 WARNING [#867] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.76s
+23:47:13 WARNING [#930] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.62s
+23:47:13 WARNING [#871] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.63s
+23:47:16 WARNING [#981] attempt 1 failed (http_status: HTTP 500); retrying in 0.81s
+23:47:16 INFO    progress: 973/1000 done, 10 in flight, queue 0, dropped 0
+23:47:16 WARNING [#881] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 1.37s
+23:47:17 WARNING [#981] attempt 2 failed (http_status: HTTP 500); retrying in 0.76s
+23:47:19 WARNING [#949] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.32s
+23:47:21 INFO    progress: 992/1000 done, 8 in flight, queue 0, dropped 0
+23:47:24 WARNING [#908] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.38s
+23:47:25 WARNING [#965] attempt 1 failed (timeout: no complete response within 15.0s); retrying in 0.54s
+23:47:26 INFO    progress: 993/1000 done, 7 in flight, queue 0, dropped 0
+23:47:29 WARNING [#930] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.63s
+23:47:31 INFO    progress: 995/1000 done, 5 in flight, queue 0, dropped 0
+23:47:34 WARNING [#949] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.18s
+23:47:36 INFO    progress: 996/1000 done, 4 in flight, queue 0, dropped 0
+23:47:40 WARNING [#965] attempt 2 failed (timeout: no complete response within 15.0s); retrying in 0.99s
+23:47:41 INFO    progress: 997/1000 done, 3 in flight, queue 0, dropped 0
+23:47:46 INFO    progress: 998/1000 done, 2 in flight, queue 0, dropped 0
+23:47:51 INFO    progress: 999/1000 done, 1 in flight, queue 0, dropped 0
+23:47:56 INFO    progress: 999/1000 done, 1 in flight, queue 0, dropped 0
+23:47:56 INFO    summary: 1000 jobs, 220.97s
+  outcomes: ok 653, fetch_error 347, parse_error 0, dropped 0, cancelled 0
+  retries 232, max queue depth 3
+  fetch latency ms: p50 438, p95 3357, max 47713
+MEASURED: exit 0, wall 221.0s, cpu 46.2s, peak memory 73 MB

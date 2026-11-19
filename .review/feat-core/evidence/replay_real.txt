@@ -11,7 +11,7 @@ linkx exit code 0, 6 records for 6 pages
 
 The one python.org difference is a link inside an HTML comment (<!--&nbsp;<span class="pre"><a href="/psf/community-infrastructure">...), which the regex counts and html.parser correctly ignores. Checked with a script that locates the href and the enclosing <!-- -->. Verdict: pass on all six pages.
 
-# Re-run at HEAD 49bf5b3 after fix round 1 (decoding now done by linkx)
+# Re-run at HEAD ffc8cec after fix round 1 (decoding now done by linkx)
 linkx exit code 0, 6 records for 6 pages
   DIFF https://www.python.org/: linkx 127, regex 128, only linkx 0, only regex 1, malformed 0
       e.g. regex only: https://www.python.org/psf/community-infrastructure
@@ -22,7 +22,7 @@ linkx exit code 0, 6 records for 6 pages
   PASS https://github.com/encode/httpx: linkx 99, regex 99, only linkx 0, only regex 0, malformed 0
 [exit 1]
 
-# Re-run at HEAD 1591d2c after fix set 3 (fail-closed peer check)
+# Re-run at HEAD d361b88 after fix set 3 (fail-closed peer check)
 linkx exit code 0, 6 records for 6 pages
   DIFF https://www.python.org/: linkx 127, regex 128, only linkx 0, only regex 1, malformed 0
       e.g. regex only: https://www.python.org/psf/community-infrastructure

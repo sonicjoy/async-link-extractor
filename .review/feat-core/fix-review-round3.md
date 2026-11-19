@@ -2,7 +2,7 @@
 
 **Verdict:** PASS WITH ISSUES
 
-Scope: `fixes-round3.patch` = `b8ff835..1591d2c` (byte-identical to `git diff b8ff835 HEAD`). All runs were on a `git archive HEAD` copy in my scratch folder, against localhost servers only. Baseline: **254 passed** in 7.1 s; `ruff check`, `ruff format --check` and `mypy` are clean. httpx 0.28.1, httpcore 1.0.9, Python 3.15.2, Windows.
+Scope: `fixes-round3.patch` = `a7695ac..d361b88` (byte-identical to `git diff a7695ac HEAD`). All runs were on a `git archive HEAD` copy in my scratch folder, against localhost servers only. Baseline: **254 passed** in 7.1 s; `ruff check`, `ruff format --check` and `mypy` are clean. httpx 0.28.1, httpcore 1.0.9, Python 3.15.2, Windows.
 
 The fail-closed check holds. I could not get a body past it on any real-socket path I tried: HTTP and HTTPS, IPv4 and IPv6, reused keep-alive connections, redirect hops, and resets. It also refuses no healthy connection: 900 fetches over healthy connections whose peer is treated as public all came back `ok`. The cost is that a public server that resets the connection straight after answering is now refused. The message says "non-public address unknown" and suggests `--allow-private` (minor finding 1). All four minors are fixed, and each new test fails when its fix is reverted. One author mutant hit the wrong line, but my own mutant of the right line is killed. The README options table is now broken in two (minor finding 2).
 
@@ -64,7 +64,7 @@ The fail-closed check holds. I could not get a body past it on any real-socket p
 None at blocker or major. The round-2 minors without a fix (Ctrl-C during the client's close, the non-UTF-8 message not naming the file, the late interrupt log line, `5f00::1`) are now recorded in `decisions.md` as ledger follow-ups or left open.
 
 ## Waiting for the owner
-- `decisions.md` lists nothing waiting. Its round-3 rows match the code and the commits (`ca5e3a3`, `1591d2c`).
+- `decisions.md` lists nothing waiting. Its round-3 rows match the code and the commits (`9107b20`, `d361b88`).
 - Note on the recorded decision "An in-memory transport (no `network_stream`) skips the check". The reason it gives, "only test transports lack a network stream", is true of httpx's own transports. It is not true of any custom `AsyncBaseTransport` that a library user passes to `extract(transport=...)` or `make_client` and that builds its own `Response` without forwarding `extensions` (a caching or recording wrapper). The check is then silently skipped. This affects library use only, the CLI cannot reach it, and round 2 had the same behaviour. It is worth one sentence in the docstring of `extract`/`make_client`.
 
 ## The same class again
