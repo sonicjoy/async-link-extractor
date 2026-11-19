@@ -60,6 +60,25 @@ def test_double_emit_raises_before_writing() -> None:
     assert len(lines(stream)) == 1
 
 
+def test_nothing_is_written_after_a_failed_write() -> None:
+    class FailsOnce(io.StringIO):
+        failed = False
+
+        def write(self, text: str) -> int:
+            if not self.failed:
+                self.failed = True
+                raise OSError("disk full")
+            return super().write(text)
+
+    stream = FailsOnce()
+    sink = Sink(stream, JOBS)
+    with pytest.raises(OSError, match="disk full"):
+        sink.emit(Record.cancelled(JOBS[0]))
+    with pytest.raises(RuntimeError, match="output failed"):
+        sink.emit(Record.cancelled(JOBS[1]))
+    assert stream.getvalue() == ""
+
+
 def test_unknown_index_raises() -> None:
     sink = Sink(io.StringIO(), JOBS)
     with pytest.raises(RuntimeError, match="unknown job"):

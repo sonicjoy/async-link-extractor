@@ -28,6 +28,8 @@ type Parser = Callable[[str, str], list[str]]
 
 
 class PageFetcher(Protocol):
+    """What the pipeline needs from a fetcher: `linkx.fetch.Fetcher`, or a test double."""
+
     async def fetch(self, job: Job) -> FetchResult: ...
 
 
@@ -90,22 +92,24 @@ class Pipeline:
                 if progress is not None:
                     progress.cancel()
                     await asyncio.wait([progress])
-        summary = self._sink.close(interrupted=self.interrupted)
+            # Still inside the handler's span: a late Ctrl-C only counts as an interrupt
+            # and cannot cut the closing records or the summary short.
+            summary = self._sink.close(interrupted=self.interrupted)
         return replace(
             summary, max_queue_depth=self._max_depth, duration_s=time.perf_counter() - started
         )
 
     async def _run_stages(self) -> None:
-        async with asyncio.TaskGroup() as consumers:
+        async with asyncio.TaskGroup() as consumer_group:
             self._consumers = [
-                consumers.create_task(self._consume(), name=f"consumer-{n}")
+                consumer_group.create_task(self._consume(), name=f"consumer-{n}")
                 for n in range(self._settings.consumers)
             ]
             try:
                 if not self.interrupted:
-                    async with asyncio.TaskGroup() as workers:
+                    async with asyncio.TaskGroup() as worker_group:
                         self._workers = [
-                            workers.create_task(self._produce(), name=f"worker-{n}")
+                            worker_group.create_task(self._produce(), name=f"worker-{n}")
                             for n in range(self._settings.concurrency)
                         ]
             finally:
@@ -142,7 +146,7 @@ class Pipeline:
             self._emit(await self._to_record(result))
 
     async def _to_record(self, result: FetchResult) -> Record:
-        if result.error is not None or result.html is None:
+        if result.html is None:  # FetchResult guarantees an error is set instead
             return Record.fetch_error(result)
         base_url = result.final_url or result.job.url
         try:
