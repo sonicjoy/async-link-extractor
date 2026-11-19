@@ -122,7 +122,12 @@ Everything runs as tasks on one event loop. The work is almost all waiting on th
 
 **Ctrl-C.** The run installs a `SIGINT` handler with `signal.signal` (Windows has no `loop.add_signal_handler`) that schedules `Pipeline.interrupt()` on the loop. The first Ctrl-C cancels the fetch workers and lets the consumers finish what is already queued; a second cancels the consumers too. Because the handler only schedules a call, cancellation always lands at an `await`, never half-way through writing a record. Without this, `asyncio.run` would cancel the consumers on the first Ctrl-C and lose the queued results; I checked both behaviours on Python 3.13 and 3.15 before choosing.
 
-**Non-public addresses.** By default `linkx` refuses loopback, private, link-local, carrier-grade NAT and multicast addresses, including those hidden inside IPv6 forms (IPv4-mapped, NAT64 `64:ff9b::/96`, IPv4-compatible). The check is an httpx request hook, which runs before the first request and before every redirect hop, so a public URL cannot redirect into an internal network (for example a cloud metadata endpoint). `--allow-private` turns it off.
+**Non-public addresses.** By default `linkx` refuses loopback, private, link-local, carrier-grade NAT and multicast addresses, including those hidden inside IPv6 forms (IPv4-mapped, NAT64 `64:ff9b::/96`, IPv4-compatible). Two httpx hooks do the checking, on the first request and on every redirect hop, so a public URL cannot redirect into an internal network (for example a cloud metadata endpoint):
+
+- a request hook resolves the host name and refuses it if any address is not public;
+- a response hook checks the address the connection actually reached, before the body is read. httpx resolves the name again to connect, so a hostile DNS server could answer "public" to the first lookup and "internal" to the second (DNS rebinding). The second check stops anything the internal service returns from being read or written out; the request itself has already been sent by then. A test reproduces the attack against a real local server.
+
+Proxy settings from the environment are ignored, so the connected address is always the real server. `--allow-private` turns both checks off.
 
 **Observability.** Records are the per-URL log. Operational logs go to stderr through the standard `logging` module, each per-URL line tagged with the job index: start settings, a progress line every 5 s (done, in flight, queue depth, dropped), each retry, drop and interrupt, and the summary (counts per outcome, retries, highest queue depth, p50/p95/max fetch latency). `--log-json` makes every line a JSON object for a log collector.
 
@@ -188,7 +193,9 @@ block, 4 consumers       200        0     2.16       block, 4 consumers       20
 | Dockerfile | Multi-stage: `uv sync --locked --no-dev` into a slim Python 3.15 image, non-root user, `linkx` as the entrypoint. |
 | Recursive crawl | Feed links from `ok` records back to the producers as new jobs with `depth = parent + 1`, stopped by `--max-depth`. Without a depth limit a crawl does not end. |
 | URL store | A store of every URL seen with the time it was last parsed. It replaces the in-memory duplicate check, prevents refetching across runs, and lets a scheduler refetch pages older than a chosen age. |
-| DNS pinning | The address check and the connection resolve the name separately, so a DNS answer that changes in between is not caught. A custom httpx transport that connects to the address that was checked closes the gap. |
+| DNS pinning | Under DNS rebinding the connected-address check refuses the response, but the GET has already reached the internal address. A custom httpx transport that connects to the exact address that was checked (keeping the host name for TLS and the `Host` header) would stop the request itself. |
+| Proxy support | Environment proxies are ignored because a proxy resolves names on its own. An explicit `--proxy` would need the address checks to move to the proxy side, or to trust the proxy's own egress rules. |
+| Logged URLs | URLs are logged and written as given, including any credentials or tokens in them, and control characters reach plain-text logs. Redact userinfo and escape control characters in the plain log format. |
 | Byte-bounded queue | The queue is bounded by count. Worst case memory is (workers + queue + consumers) bodies of up to `--max-bytes` each, about 250 MB typical and under 1 GB worst case at defaults. A byte budget with a condition variable would bound it directly. |
 | `Retry-After` | Honour it on 429 and 503, capped, instead of the fixed backoff. |
 | Per-host concurrency cap | Today the limit is a time gap per host; a per-host semaphore would also cap simultaneous connections to one site. |
@@ -215,7 +222,7 @@ URL scheduler --> [urls topic, keyed by host] --> fetchers --> [raw-html topic, 
 
 ```bash
 uv sync
-uv run pytest --cov            # 223 tests, about 5 s
+uv run pytest --cov            # 229 tests, about 6 s
 uv run ruff check && uv run ruff format --check
 uv run mypy                    # strict
 uv run python scripts/demo_backpressure.py
