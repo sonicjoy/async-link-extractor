@@ -78,6 +78,8 @@ Links are absolute `http`/`https` URLs from `<a href>`, resolved against `<base 
 | `--retries N` | 2 | extra attempts after timeouts, connection errors, 5xx and 429 |
 | `--max-bytes N` | 2,000,000 | largest body accepted, counted after decompression |
 | `--per-host-delay S` | 0 | minimum gap between requests to one host |
+
+Upper bounds, far above real use, stop a typo from hanging or exhausting memory: `--concurrency` 1,000, `--consumers` 64, `--queue-max` 1,000,000, `--max-bytes` 1,000,000,000, `--retries` 10, `--timeout` and `--per-host-delay` 3,600 s.
 | `--allow-private` | off | permit loopback, private and link-local addresses |
 | `--keep-duplicates` | off | fetch a repeated URL once per occurrence |
 | `--verbose` | off | log each attempt and each record |
@@ -127,7 +129,7 @@ Everything runs as tasks on one event loop. The work is almost all waiting on th
 - a request hook resolves the host name and refuses it if any address is not public;
 - a response hook checks the address the connection actually reached, before the body is read. httpx resolves the name again to connect, so a hostile DNS server could answer "public" to the first lookup and "internal" to the second (DNS rebinding). The second check stops anything the internal service returns from being read or written out; the request itself has already been sent by then. A test reproduces the attack against a real local server.
 
-Proxy settings from the environment are ignored, so the connected address is always the real server. `--allow-private` turns both checks off.
+If the connected address cannot be read (a socket the server reset straight after answering), the response is refused too: the check fails closed. Settings from the environment are ignored (`trust_env=False`), so the connected address is always the real server: that covers proxies (`HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`) and also custom certificate authorities (`SSL_CERT_FILE`, `SSL_CERT_DIR`); HTTPS uses the bundled certifi roots. `--allow-private` turns both address checks off.
 
 **Observability.** Records are the per-URL log. Operational logs go to stderr through the standard `logging` module, each per-URL line tagged with the job index: start settings, a progress line every 5 s (done, in flight, queue depth, dropped), each retry, drop and interrupt, and the summary (counts per outcome, retries, highest queue depth, p50/p95/max fetch latency). `--log-json` makes every line a JSON object for a log collector.
 
@@ -222,7 +224,7 @@ URL scheduler --> [urls topic, keyed by host] --> fetchers --> [raw-html topic, 
 
 ```bash
 uv sync
-uv run pytest --cov            # 243 tests, about 7 s
+uv run pytest --cov            # 255 tests, about 7 s
 uv run ruff check && uv run ruff format --check
 uv run mypy                    # strict
 uv run python scripts/demo_backpressure.py

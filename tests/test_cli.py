@@ -119,9 +119,29 @@ def test_non_finite_numbers_are_usage_errors(args: list[str]) -> None:
     assert exc.value.code == 2
 
 
-def test_a_huge_integer_option_is_accepted_not_a_crash() -> None:
-    args = build_parser().parse_args(["http://x.test/", "--retries", "9" * 400])
-    assert args.retries == int("9" * 400)
+@pytest.mark.parametrize(
+    ("option", "largest"),
+    [
+        ("--concurrency", "1000"),
+        ("--consumers", "64"),
+        ("--queue-max", "1000000"),
+        ("--max-bytes", "1000000000"),
+        ("--retries", "10"),
+        ("--timeout", "3600"),
+        ("--per-host-delay", "3600"),
+    ],
+)
+def test_options_have_an_upper_bound(option: str, largest: str) -> None:
+    build_parser().parse_args(["http://x.test/", option, largest])  # the bound itself is fine
+    with pytest.raises(SystemExit) as exc:
+        main(["http://x.test/", option, str(int(float(largest)) + 1)])
+    assert exc.value.code == 2
+
+
+def test_a_huge_integer_option_is_a_usage_error_not_a_crash() -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["http://x.test/", "--retries", "9" * 400])
+    assert exc.value.code == 2
 
 
 @pytest.mark.parametrize("flag", ["--out", "input"])
