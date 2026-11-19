@@ -1,0 +1,13 @@
+$ uv run python .review\feat-core\evidence\mutants_round3.py
+KILLED  peer check fails open again  FAILED tests/test_fetch.py::test_connection_whose_address_cannot_be_read_is_refused
+KILLED  3xx responses not closed  FAILED tests/test_e2e.py::test_redirects_release_their_connection - Assertion...
+KILLED  InvalidURL not mapped  FAILED tests/test_fetch.py::test_invalid_url_sends_no_request[http://[::1/broken]
+KILLED  no upper bound  FAILED tests/test_cli.py::test_options_have_an_upper_bound[--concurrency-1000]
+4/4 mutants killed
+
+# Re-run with the mutants retargeted (fix review round 3 nit) at the fix-set-4 working tree
+KILLED  peer check fails open again  FAILED tests/test_fetch.py::test_connection_whose_address_cannot_be_read_is_refused
+KILLED  3xx responses not closed  FAILED tests/test_e2e.py::test_redirects_release_their_connection - Assertion...
+KILLED  InvalidURL not mapped  FAILED tests/test_fetch.py::test_redirect_to_a_non_web_url_is_invalid_and_not_retried[javascript:alert(1)]
+KILLED  no upper bound  FAILED tests/test_cli.py::test_options_have_an_upper_bound[--concurrency-1000]
+4/4 mutants killed

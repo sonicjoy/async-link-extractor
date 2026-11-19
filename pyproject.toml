@@ -50,7 +50,7 @@ exclude_also = ["if TYPE_CHECKING:", "class .*\\(Protocol\\):", "@overload"]
 [tool.ruff]
 line-length = 100
 target-version = "py313"
-extend-exclude = ["notes"]
+extend-exclude = ["notes", ".review"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF", "ASYNC", "PT", "C4", "PL"]

@@ -1,0 +1,14 @@
+$ uv run linkx http://python.org http://github.com/encode/httpx http://en.wikipedia.org/wiki/Web_crawler http://docs.python.org/3/   (real redirects, at HEAD b8ff835)
+
+22:18:48 INFO    summary: 4 jobs, 0.68s
+  outcomes: ok 4, fetch_error 0, parse_error 0, dropped 0, cancelled 0
+
+3 http://docs.python.org/3/ -> https://docs.python.org/3/ ok status=200 links=57
+0 http://python.org -> https://www.python.org/ ok status=200 links=127
+2 http://en.wikipedia.org/wiki/Web_crawler -> https://en.wikipedia.org/wiki/Web_crawler ok status=200 links=493
+1 http://github.com/encode/httpx -> https://github.com/encode/httpx ok status=200 links=99
+
+# Re-run at HEAD 1591d2c
+
+  outcomes: ok 5, fetch_error 0, parse_error 0, dropped 0, cancelled 0
+

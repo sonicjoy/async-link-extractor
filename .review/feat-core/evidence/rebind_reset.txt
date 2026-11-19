@@ -1,0 +1,10 @@
+$ uv run python .review\feat-core\evidence\rebind_reset.py   (working tree with fix set 3)
+40 fetches of an internal page that resets after answering: {'blocked_address': 40}
+records with internal links written out: 0
+
+$ same script at HEAD b8ff835 (fix round 2, before fail-closed), in a temporary worktree
+   Building linkx @ <scratch worktree>
+      Built linkx @ <scratch worktree>
+Installed 23 packages in 316ms
+40 fetches of an internal page that resets after answering: {'ok': 40}
+records with internal links written out: 40

@@ -1,6 +1,6 @@
 # Goldfish Review Report
 
-**Target:** `C:\Users\sonic\source\repos\async-link-extractor\docs\designs\linkx.md` (`1-263`)
+**Target:** `docs\designs\linkx.md` (`1-263`)
 
 **Stage:** 5, Initial Zoom Out Review. **Background given to reviewers:** `docs\designs\linkx-brief.md`.
 

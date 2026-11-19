@@ -226,7 +226,12 @@ async def extract(
     resolve: Resolver = system_resolve,
     parse: Parser = extract_links,
 ) -> Summary:
-    """Run the whole pipeline over `jobs`, writing one record per job to `stream`."""
+    """Run the whole pipeline over `jobs`, writing one record per job to `stream`.
+
+    `transport` replaces the network (tests, the demo). The connected-address check needs
+    the transport to report the socket in the response's `network_stream` extension, as
+    httpx's own transport does; a transport that does not is not checked.
+    """
     sink = Sink(stream, jobs)
     async with make_client(settings, transport) as client:
         fetcher = Fetcher(client, settings, resolve=resolve)

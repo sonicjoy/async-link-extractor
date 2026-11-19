@@ -1,0 +1,103 @@
+$ docker run --rm -v repo:/src:ro python:3.15-slim sh linux_ctrl_c.sh
+Python 3.15.2
+=== scenario 1: one Ctrl-C while one fetch is stuck ===
+exit=130
+0 /fast1 ok
+1 0/slow cancelled
+2 /fast2 cancelled
+21:44:46 WARNING interrupted: stopping fetches, finishing queued pages (Ctrl-C again to stop now)
+21:44:46 INFO    summary: 3 jobs in 1.85s (interrupted)
+  outcomes: ok 1, fetch_error 0, parse_error 0, dropped 0, cancelled 2
+=== scenario 2: two Ctrl-C, the second during the drain of large pages ===
+exit=130
+7 records, one per job
+0 /big1 ok
+1 /big2 ok
+2 /big3 cancelled
+3 /big4 cancelled
+4 /big5 cancelled
+5 /big6 ok
+6 /slow cancelled
+21:44:48 WARNING interrupted: stopping fetches, finishing queued pages (Ctrl-C again to stop now)
+21:44:48 WARNING interrupted: stopping now
+21:44:48 INFO    summary: 7 jobs in 1.74s (interrupted)
+  outcomes: ok 3, fetch_error 0, parse_error 0, dropped 0, cancelled 4
+
+
+# Re-run at HEAD 49bf5b3 after fix round 1
+Python 3.15.2
+=== scenario 1: one Ctrl-C while one fetch is stuck ===
+exit=130
+0 /fast1 ok
+1 0/slow cancelled
+2 /fast2 cancelled
+22:04:32 WARNING interrupted: stopping fetches, finishing queued pages (Ctrl-C again to stop now)
+22:04:32 INFO    summary: 3 jobs, 1.84s (interrupted)
+  outcomes: ok 1, fetch_error 0, parse_error 0, dropped 0, cancelled 2
+=== scenario 2: two Ctrl-C, the second during the drain of large pages ===
+exit=130
+7 records, one per job
+0 /big1 ok
+1 /big2 ok
+2 /big3 ok
+3 /big4 cancelled
+4 /big5 cancelled
+5 /big6 cancelled
+6 /slow cancelled
+22:04:34 WARNING interrupted: stopping fetches, finishing queued pages (Ctrl-C again to stop now)
+22:04:34 WARNING interrupted: stopping now
+22:04:34 INFO    summary: 7 jobs, 1.76s (interrupted)
+  outcomes: ok 3, fetch_error 0, parse_error 0, dropped 0, cancelled 4
+
+
+# Re-run at HEAD b8ff835 after fix round 2
+Python 3.15.2
+=== scenario 1: one Ctrl-C while one fetch is stuck ===
+exit=130
+0 /fast1 ok
+1 0/slow cancelled
+2 /fast2 cancelled
+22:19:20 WARNING interrupted: stopping fetches, finishing queued pages (Ctrl-C again to stop now)
+22:19:20 INFO    summary: 3 jobs, 1.82s (interrupted)
+  outcomes: ok 1, fetch_error 0, parse_error 0, dropped 0, cancelled 2
+=== scenario 2: two Ctrl-C, the second during the drain of large pages ===
+exit=130
+7 records, one per job
+0 /big1 ok
+1 /big2 ok
+2 /big3 ok
+3 /big4 cancelled
+4 /big5 cancelled
+5 /big6 cancelled
+6 /slow cancelled
+22:19:22 WARNING interrupted: stopping fetches, finishing queued pages (Ctrl-C again to stop now)
+22:19:22 WARNING interrupted: stopping now
+22:19:22 INFO    summary: 7 jobs, 1.74s (interrupted)
+  outcomes: ok 3, fetch_error 0, parse_error 0, dropped 0, cancelled 4
+
+
+# Re-run at HEAD 1591d2c after fix set 3
+Python 3.15.2
+=== scenario 1: one Ctrl-C while one fetch is stuck ===
+exit=130
+0 /fast1 ok
+1 0/slow cancelled
+2 /fast2 cancelled
+23:06:25 WARNING interrupted: stopping fetches, finishing queued pages (Ctrl-C again to stop now)
+23:06:25 INFO    summary: 3 jobs, 1.85s (interrupted)
+  outcomes: ok 1, fetch_error 0, parse_error 0, dropped 0, cancelled 2
+=== scenario 2: two Ctrl-C, the second during the drain of large pages ===
+exit=130
+7 records, one per job
+0 /big1 cancelled
+1 /big2 ok
+2 /big3 ok
+3 /big4 cancelled
+4 /big5 ok
+5 /big6 cancelled
+6 /slow cancelled
+23:06:27 WARNING interrupted: stopping fetches, finishing queued pages (Ctrl-C again to stop now)
+23:06:27 WARNING interrupted: stopping now
+23:06:27 INFO    summary: 7 jobs, 1.74s (interrupted)
+  outcomes: ok 3, fetch_error 0, parse_error 0, dropped 0, cancelled 4
+

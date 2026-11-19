@@ -1,0 +1,25 @@
+# First version of this script also required summary.interrupted == (interrupts scheduled > 0). 13 of 300 runs failed that check, every one 'interrupted=False with N interrupts': the timer fired after a short run had already finished. That was a harness error, not a product bug; the check now asserts what must hold instead (see the comment in stress.py).
+
+$ uv run python .review\feat-core\evidence\stress.py
+seed 7: 300 randomised runs, 0 failed
+[exit 0]
+
+$ uv run python .review\feat-core\evidence\stress.py --break   (must fail)
+FAIL run 3: raised RuntimeError: 1 job has no record
+FAIL run 12: raised RuntimeError: 1 job has no record
+FAIL run 36: raised RuntimeError: 1 job has no record
+FAIL run 41: raised RuntimeError: 1 job has no record
+FAIL run 59: raised RuntimeError: 1 job has no record
+FAIL run 70: raised RuntimeError: 1 job has no record
+FAIL run 112: raised RuntimeError: 1 job has no record
+FAIL run 116: raised RuntimeError: 1 job has no record
+FAIL run 148: raised RuntimeError: 1 job has no record
+FAIL run 177: raised RuntimeError: 1 job has no record
+seed 7: 300 randomised runs, 16 failed (lossy emit, --break)
+[exit 1]
+
+$ uv run --python 3.13 ... stress.py
+Installed 23 packages in 374ms
+seed 7: 300 randomised runs, 0 failed
+
+Note on --break: only 16 of 300 runs caught the lost record. In interrupted runs the sink fills any job without a record with 'cancelled', so a record lost during an interrupted run is indistinguishable from a cancelled job. The audit catches a lost record only on uninterrupted runs. Recorded as a known limit in the packet.
