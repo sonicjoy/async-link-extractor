@@ -15,6 +15,7 @@ import pytest
 
 import linkx.cli
 from linkx.cli import (
+    _root_cause,
     build_parser,
     dedupe_key,
     format_summary,
@@ -24,6 +25,7 @@ from linkx.cli import (
     settings_from,
 )
 from linkx.models import Outcome, Settings, Summary
+from linkx.sink import OutputFailed
 
 
 @pytest.fixture(autouse=True)
@@ -115,6 +117,20 @@ def test_non_finite_numbers_are_usage_errors(args: list[str]) -> None:
     with pytest.raises(SystemExit) as exc:
         main(["http://example.com/", *args])
     assert exc.value.code == 2
+
+
+def test_a_huge_integer_option_is_accepted_not_a_crash() -> None:
+    args = build_parser().parse_args(["http://x.test/", "--retries", "9" * 400])
+    assert args.retries == int("9" * 400)
+
+
+@pytest.mark.parametrize("flag", ["--out", "input"])
+def test_a_path_with_a_null_character_is_a_usage_error(
+    flag: str, capsys: pytest.CaptureFixture[str]
+) -> None:
+    args = ["http://a.test/", "--out", "bad\0name"] if flag == "--out" else ["bad\0name"]
+    assert run(args) == 2
+    assert "cannot" in capsys.readouterr().err
 
 
 def test_option_defaults_are_the_settings_defaults() -> None:
@@ -360,6 +376,32 @@ def test_broken_pipe_on_stdout_exits_1(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(sys, "stdout", ClosedPipe())
     assert run(["http://a.test/"]) == 1
+
+
+def test_the_first_output_error_is_the_one_reported(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Many tasks emit at once; after the first write fails, the others are refused.
+    # The operator must see the real cause, not "output failed earlier".
+    class ClosedPipe(io.StringIO):
+        def write(self, text: str) -> int:
+            raise BrokenPipeError("reader went away")
+
+    monkeypatch.setattr(sys, "stdout", ClosedPipe())
+    urls = [f"http://h{i}.test/" for i in range(40)]
+    assert run([*urls, "--concurrency", "8", "--consumers", "4", "--queue-max", "1"]) == 1
+    err = capsys.readouterr().err
+    assert "reader went away" in err
+    assert "output failed earlier" not in err
+
+
+def test_root_cause_prefers_the_first_real_failure() -> None:
+    original = BrokenPipeError("reader went away")
+    refused = OutputFailed("output failed earlier")
+    refused.__cause__ = original
+    nested = ExceptionGroup("outer", [ExceptionGroup("inner", [refused]), original])
+    assert _root_cause(nested) is original
+    assert _root_cause(ExceptionGroup("only refusals", [refused])) is original
 
 
 def test_summary_without_fetches_says_so() -> None:

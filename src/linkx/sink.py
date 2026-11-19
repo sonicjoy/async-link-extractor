@@ -21,6 +21,10 @@ def percentile(values: Sequence[int], p: float) -> int | None:
     return ordered[rank - 1]
 
 
+class OutputFailed(RuntimeError):
+    """Raised for every emit after a write failed; `__cause__` is that first failure."""
+
+
 class Sink:
     def __init__(self, stream: TextIO, jobs: Sequence[Job]) -> None:
         self._stream = stream
@@ -29,7 +33,7 @@ class Sink:
         self._counts: Counter[Outcome] = Counter()
         self._latencies: list[int] = []
         self._retries = 0
-        self._failed = False
+        self._failure: BaseException | None = None
 
     @property
     def emitted(self) -> int:
@@ -45,8 +49,8 @@ class Sink:
         the loop iteration before the TaskGroups cancel them, and they must not write
         past a gap in the output.
         """
-        if self._failed:
-            raise RuntimeError("output failed earlier; no further records are written")
+        if self._failure is not None:
+            raise OutputFailed("output failed earlier") from self._failure
         if record.index not in self._jobs:
             raise RuntimeError(f"record for unknown job {record.index}")
         if record.index in self._written:
@@ -60,8 +64,8 @@ class Sink:
         try:
             self._stream.write(record.to_json() + "\n")
             self._stream.flush()
-        except BaseException:
-            self._failed = True
+        except BaseException as exc:
+            self._failure = exc
             raise
 
     def close(self, *, interrupted: bool) -> Summary:

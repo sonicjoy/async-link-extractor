@@ -16,7 +16,7 @@ from dataclasses import replace
 import httpx
 import pytest
 
-from linkx.models import ErrorKind, FetchError, FetchResult, Job, Outcome, Settings
+from linkx.models import ErrorKind, FetchError, FetchResult, Job, Outcome, Settings, Summary
 from linkx.pipeline import Pipeline, extract
 from linkx.sink import Sink
 
@@ -286,6 +286,26 @@ async def test_interrupt_cancels_a_worker_blocked_on_a_full_queue() -> None:
     summary = await pipeline.run()
     assert len(by_index(stream)) == 6
     assert summary.counts[Outcome.CANCELLED] > 0
+
+
+async def test_ctrl_c_while_the_sink_closes_is_still_handled_by_the_pipeline() -> None:
+    # A late Ctrl-C, landing while the closing records are written, must count as an
+    # interrupt rather than reach whatever handler was installed before the run.
+    outside: list[int] = []
+    previous = signal.signal(signal.SIGINT, lambda signum, frame: outside.append(signum))
+
+    class SlowClose(Sink):
+        def close(self, *, interrupted: bool) -> Summary:
+            signal.raise_signal(signal.SIGINT)
+            return super().close(interrupted=interrupted)
+
+    try:
+        jobs = make_jobs(2)
+        pipeline = Pipeline(jobs, SETTINGS, SlowClose(io.StringIO(), jobs), ScriptedFetcher())
+        await pipeline.run()
+    finally:
+        signal.signal(signal.SIGINT, previous)
+    assert outside == [], "the Ctrl-C reached the handler from before the run"
 
 
 @pytest.mark.skipif(threading.current_thread() is not threading.main_thread(), reason="signals")
