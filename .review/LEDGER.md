@@ -40,7 +40,7 @@ The short memory across reviews: the kinds of mistake found here, what is still 
 | 2026-11-19 | design stage 7, critic | n/a | 0 Blocker, 6 Major; late-Ctrl-C drain, audit gap fixed. [report](design/critic_report.md) |
 | 2026-11-19 | design stage 9, readiness | n/a | 1 Blocker (address policy, decided by the author), 13 Major. [report](design/implementation_readiness_report.md) |
 | 2026-11-19 | design stage 8, intermediate zoom out | n/a | 0 Blocker, 4 Major; redirect checks moved to an httpx hook after an experiment. [report](design/intermediate_zoom_out_report.md) |
-| 2026-11-19 | feat-core (code) | 26f47a7 | Full path. Correctness 0 blocker / 2 major, security 1 high / 1 medium, simplicity 5 should; 4 fix sets, 4 fix reviews (round 2 reached the cap: 1 major went to the author, who chose fail closed). 5 classes added, 13 follow-ups open. Needed the user: 3 (rebinding approach, design wording, fail-closed after the cap). [packet](feat-core/human-review.md) |
+| 2026-11-19 | feat-core (code) | 26f47a7 | Full path. Correctness 0 blocker / 2 major, security 1 high / 1 medium, simplicity 5 should; 4 fix sets, 4 fix reviews (round 2 reached the cap: 1 major went to the author, who chose fail closed). 5 classes added, 13 follow-ups open. Needed the user: 3 (rebinding approach, design wording, fail-closed after the cap). First GitHub CI run failed (missing `setup-uv@v10` tag); actions SHA-pinned in 5edfad0, fix-reviewed, CI green on all 4 jobs. Not "clear" (no formal model check); pushed and merged with the user's go-ahead. [packet](feat-core/human-review.md) |
 
 ## Decisions kept against reviewer advice (design)
 
