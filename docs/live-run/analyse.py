@@ -76,6 +76,45 @@ quantiles = ", ".join(f"p{p} {pick(p)}" for p in (50, 90, 95, 99))
 print(f"fetch latency ms: {quantiles}, max {lat[-1]}")
 attempts = Counter(r["attempts"] for r in records)
 print("attempts per URL:", dict(sorted(attempts.items())))
+recovered = sum(1 for r in records if r["outcome"] == "ok" and r["attempts"] > 1)
+print(f"ok pages that needed a retry: {recovered}")
+
+
+def nearest_rank(values: list[int], p: int) -> int:
+    ordered = sorted(values)
+    return ordered[max(1, -(-p * len(ordered) // 100)) - 1]
+
+
+def redirected_ok(r: dict[str, object]) -> bool:
+    final, url = str(r["final_url"]), str(r["url"])
+    return r["outcome"] == "ok" and final.rstrip("/") != url.rstrip("/")
+
+
+GROUPS = {
+    "all": lambda r: True,
+    "ok": lambda r: r["outcome"] == "ok",
+    "ok through a redirect": redirected_ok,
+    "error, not retried": lambda r: r["outcome"] == "fetch_error" and r["attempts"] == 1,
+    "error after 3 attempts": lambda r: r["outcome"] == "fetch_error" and r["attempts"] == 3,
+    "timeout": lambda r: bool(r["error"]) and r["error"]["kind"] == "timeout",
+}
+print("elapsed_ms by group (n, p50, p90, p95, p99, max):")
+for name, keep in GROUPS.items():
+    xs = [r["elapsed_ms"] for r in records if r["elapsed_ms"] is not None and keep(r)]
+    cells = ", ".join(str(nearest_rank(xs, p)) for p in (50, 90, 95, 99))
+    print(f"  {name:<24} n={len(xs):>4}: {cells}, max {max(xs)}")
+
+progress = re.findall(r"(\d\d:\d\d:\d\d) INFO +progress: (\d+)/\d+ done, (\d+) in flight", log)
+started = re.search(r"(\d\d:\d\d:\d\d) INFO +start:", log)
+if progress and started:
+
+    def seconds(stamp: str) -> int:
+        h, m, s = map(int, stamp.split(":"))
+        return h * 3600 + m * 60 + s
+
+    t0 = seconds(started.group(1))
+    points = [f"{seconds(t) - t0}s {d} ({f} in flight)" for t, d, f in progress]
+    print("progress:", " | ".join(points))
 for line in log.splitlines():
     if (
         line.startswith(("MEASURED", "  outcomes", "  retries", "  fetch latency"))

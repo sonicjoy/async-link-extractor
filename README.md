@@ -190,6 +190,7 @@ block, 4 consumers       200        0     2.16       block, 4 consumers       20
 
 - Both runs wrote exactly one record for each URL. The failures are the ordinary web: refusals (403), dead links (404), dead domains, PDFs, timeouts, rate limits.
 - Five times the workers got through the first 90% about six times sooner. The last 26 URLs took 40 of the 71 seconds: servers that never answer, using all three 15-second attempts.
+- Split by outcome, a page that works took 585 ms at the median and 2.1 s at p95 (50 workers); the headline p99 of 47 s is only the servers that never answer. Retries recovered nothing in this run: every ok page succeeded first time, and every retried URL failed on all three attempts. [Latency by outcome](docs/live-run/README.md#latency-by-outcome).
 - A first attempt, with a URL list capped per hostname rather than per site, sent 454 requests to Wikipedia's language hostnames. Their rate limit evidently spans those hostnames: 436 failed with HTTP 429 after 873 retries. That exposed two limits listed under [Not built](#not-built-and-how-i-would-build-it): politeness per hostname is not politeness per provider, and retries ignore `Retry-After`.
 
 ## Assumptions

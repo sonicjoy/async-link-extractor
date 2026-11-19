@@ -25,6 +25,37 @@ Logs exactly as printed: [`log-c50.txt`](log-c50.txt), [`log-c10.txt`](log-c10.t
 
 **Why pages failed** (concurrency 50): 90 refused a non-browser client (HTTP 403), 79 were dead links (404), 55 could not be reached (DNS failure, refused connection, expired certificate, dropped connection), 50 were not HTML (mostly PDFs), 24 timed out, 29 were rate limited (429), 2 were over the 2 MB cap, and 21 more had other HTTP statuses (401, 402, 406, 410, 451, several 5xx, and one 307 without a usable `Location`). Each record carries its error kind and message.
 
+## Latency, by outcome
+
+A record's `elapsed_ms` covers the whole fetch for that URL: the wait for the host's slot, every attempt and every backoff sleep, for failures as well as successes. The summary's single p50/p95 therefore mixes fast pages with servers that never answer; split by outcome it reads very differently (`analyse.py`, nearest-rank percentiles, milliseconds):
+
+| `elapsed_ms` | c50: n | p50 | p95 | p99 | max | c10: n | p50 | p95 | p99 | max |
+|---|---|---|---|---|---|---|---|---|---|---|
+| All URLs | 1,000 | 603 | 4,621 | 46,802 | 47,902 | 1,000 | 438 | 3,357 | 46,696 | 47,713 |
+| **ok** | 650 | **585** | **2,054** | 4,073 | 12,297 | 653 | **406** | **1,585** | 2,913 | 13,888 |
+| ok through a redirect | 193 | 894 | 2,293 | 9,077 | 11,546 | 194 | 695 | 2,149 | 4,236 | 8,482 |
+| Error, not retried (403, 404, PDF, ...) | 235 | 377 | 1,751 | 4,122 | 10,408 | 231 | 298 | 1,320 | 2,714 | 4,344 |
+| Error after 3 attempts | 115 | 3,275 | 47,035 | 47,425 | 47,902 | 116 | 2,651 | 47,030 | 47,524 | 47,713 |
+| Timeout | 24 | 46,755 | 47,425 | 47,902 | 47,902 | 24 | 46,571 | 47,524 | 47,713 | 47,713 |
+
+- **A page that works takes about half a second** at the median and about 2 s at p95. The headline p99 of about 47 s is the 24 servers that never answered: three 15-second attempts plus backoff.
+- **A redirect costs about 300 ms** at the median: one more round trip.
+- **Refusals and dead links are fast:** a 403 or 404 returns in about 0.3 s.
+- **Per-request latency rises with concurrency** (ok median 585 ms at 50 workers, 406 ms at 10), while throughput still rises about threefold. A likely cause, not measured: 50 simultaneous TLS handshakes sharing one home connection and one Python thread.
+
+**Retries recovered nothing in this run.** Every ok page succeeded on its first attempt (`ok pages that needed a retry: 0`), and all 115 URLs that were retried failed on every attempt: dead domains, servers that never answer, rate limits. The 230 retries only lengthened the tail. With `--retries 0` the same URLs would have failed, and the slowest would have given up after one 15-second timeout instead of about 47 s. One run against one kind of list is not proof that retries are useless: they earn their keep against transient 5xx errors and dropped connections, which this list happened not to contain.
+
+**Progress over time** (from the progress lines, every 5 s; 50 workers):
+
+```text
+6s 217 done | 11s 441 | 16s 625 | 21s 780 | 26s 928 | 31s 974 (26 in flight)
+36s 977 (23 in flight) | 41s 977 | 46s 977 | 51s 979 | 56s 984 | 61s 989 | 66s 993 | 71s 997 | end 1,000
+```
+
+97% of URLs were done in 31 s. For the next 15 s the count barely moved while 23 fetches stayed in flight: the progress line showed the dead-server tail as it happened. The queue was empty throughout.
+
+**What the metrics don't show yet.** The progress line has counts but no latency, and the summary's percentiles mix successes and failures. A long-running service would publish latency as a histogram split by outcome, as above, with fetches by outcome, retries and drops as counters and queue depth as a gauge. `elapsed_ms` also cannot separate DNS, connect and download time within an attempt; httpx's trace hooks could.
+
 ## What it shows
 
 - **One record per URL at scale.** Both runs wrote exactly one record for each of the 1,000 URLs, with no parse errors.
