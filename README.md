@@ -177,6 +177,21 @@ block, 4 consumers       200        0     2.16       block, 4 consumers       20
 - `drop-oldest` finishes at fetch speed and loses most pages; `block` loses nothing and runs at the parser's pace.
 - With the GIL on, four consumers are no faster than one, because parsing is pure-Python CPU work. On the free-threaded build the same four consumers are 2.8 times faster.
 
+### On the real web: 1,000 URLs
+
+[`docs/live-run/`](docs/live-run/README.md) runs `linkx` against 1,000 real pages on 641 sites (Windows 11, home connection, `--per-host-delay 1 --timeout 15`), with the logs, records and scripts to repeat it.
+
+| | concurrency 50 | concurrency 10 |
+|---|---|---|
+| ok / fetch_error / parse_error / dropped | 650 / 350 / 0 / 0 | 653 / 347 / 0 / 0 |
+| Wall time (900 done, to within 5 s) | 71 s (26 s) | 221 s (161 s) |
+| Peak memory | 102 MB | 73 MB |
+| Fetch latency p50 / p95 / p99 | 0.6 / 4.6 / 46.8 s | 0.4 / 3.4 / 46.7 s |
+
+- Both runs wrote exactly one record for each URL. The failures are the ordinary web: refusals (403), dead links (404), dead domains, PDFs, timeouts, rate limits.
+- Five times the workers got through the first 90% about six times sooner. The last 26 URLs took 40 of the 71 seconds: servers that never answer, using all three 15-second attempts.
+- A first attempt, with a URL list capped per hostname rather than per site, sent 454 requests to Wikipedia's language hostnames. Their rate limit evidently spans those hostnames: 436 failed with HTTP 429 after 873 retries. That exposed two limits listed under [Not built](#not-built-and-how-i-would-build-it): politeness per hostname is not politeness per provider, and retries ignore `Retry-After`.
+
 ## Assumptions
 
 - The input is a finite list of URLs, and links found are reported, not followed.
@@ -199,7 +214,8 @@ block, 4 consumers       200        0     2.16       block, 4 consumers       20
 | Proxy support | Environment proxies are ignored because a proxy resolves names on its own. An explicit `--proxy` would need the address checks to move to the proxy side, or to trust the proxy's own egress rules. |
 | Logged URLs | URLs are logged and written as given, including any credentials or tokens in them, and control characters reach plain-text logs. Redact userinfo and escape control characters in the plain log format. |
 | Byte-bounded queue | The queue is bounded by count. Worst case memory is (workers + queue + consumers) bodies of up to `--max-bytes` each, about 250 MB typical and under 1 GB worst case at defaults. A byte budget with a condition variable would bound it directly. |
-| `Retry-After` | Honour it on 429 and 503, capped, instead of the fixed backoff. |
+| `Retry-After` | Honour it on 429 and 503, capped, instead of the fixed backoff. The live run shows the cost: 873 retries against a rate limit, most of which failed again. |
+| Politeness per provider | `--per-host-delay` spaces requests per hostname, but many hostnames can share one rate limit (Wikimedia's language sites, a CDN, a hosting platform). Key the limiter by registrable domain, or by resolved address or network, and back off the whole group after a 429. |
 | Per-host concurrency cap | Today the limit is a time gap per host; a per-host semaphore would also cap simultaneous connections to one site. |
 | Metrics | A long-running service would export counters (fetches by outcome, drops, retries), a gauge (queue depth) and a histogram (fetch latency) to Prometheus or OpenTelemetry, from the same points that feed the summary today. |
 
