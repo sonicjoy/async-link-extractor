@@ -1,0 +1,7 @@
+$ uv run python .review\feat-core\evidence\mutants_round2.py
+KILLED  inflate without +1  FAILED tests/test_fetch.py::test_decompression_bomb_never_holds_much_more_than_the_cap
+KILLED  sink closed outside the Ctrl-C span  FAILED tests/test_pipeline.py::test_ctrl_c_while_the_sink_closes_is_still_handled_by_the_pipeline
+KILLED  httpx follows redirects (reads 3xx bodies)  FAILED tests/test_fetch.py::test_redirect_is_followed_and_final_url_reported
+KILLED  CLI reports the first leaf  FAILED tests/test_cli.py::test_the_first_output_error_is_the_one_reported - a...
+KILLED  charset fallback catches LookupError only  FAILED tests/test_fetch.py::test_every_known_codec_name_decodes_or_falls_back
+5/5 mutants killed

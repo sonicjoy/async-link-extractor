@@ -1,7 +1,7 @@
 # linkx: concurrent web link extractor
 
 *   **Author:** Joe Luo
-*   **Status:** Approved
+*   **Status:** Approved (wording updated 2026-11-19 to match review fixes, approved by the author)
 *   **Date:** 2026-11-19
 
 --------------------------------------------------------------------------------
@@ -85,11 +85,11 @@ A **job** is one URL to fetch, a **result** is what a fetch produced and the que
 | Module | Responsibility |
 | --- | --- |
 | `models.py` | `Outcome`, `Job`, `FetchResult`, `Record`, `Summary`, `Settings` |
-| `fetch.py` | `Fetcher(client, settings, limiter, resolve, sleep, rng)`; `await fetcher.fetch(job) -> FetchResult`, which never raises `Exception` |
+| `fetch.py` | `Fetcher(client, settings, limiter, resolve, sleep, rng, clock)`; `await fetcher.fetch(job) -> FetchResult`, which never raises `Exception` |
 | `ratelimit.py` | `HostLimiter(delay, clock, sleep)` |
 | `overflow.py` | The overflow policies and `POLICIES`, a name-to-policy table |
 | `parse.py` | `extract_links(html, base_url) -> list[str]`. Pure function |
-| `sink.py` | `Sink(stream, total)`: `emit`, `close`. Synchronous |
+| `sink.py` | `Sink(stream, jobs)`: `emit`, `close`. Synchronous; it holds the jobs so `close` can write `cancelled` records |
 | `pipeline.py` | `Pipeline(jobs, settings, sink, fetcher, parse=extract_links)`: `await run()`, `interrupt()` |
 | `cli.py` | Arguments, input reading, signal handler, exit code |
 
@@ -108,13 +108,13 @@ The fetcher first validates the URL: it must parse, have scheme `http` or `https
 One attempt is:
 
 1.  `await limiter.wait(host)`, which enforces `--per-host-delay` and is outside the timeout.
-2.  Under `asyncio.timeout(--timeout)`: send the request, let httpx follow up to 9 redirects, and stream the body. httpx's own timeout is set to the same value.
+2.  Under `asyncio.timeout(--timeout)`: send the request, follow up to 9 redirects, and stream the body. httpx's own timeout is set to the same value. `linkx` follows redirects itself, using the next request httpx builds from the `Location` header, and closes each 3xx without reading its body: when httpx follows redirects it reads every 3xx body in full, outside the size cap.
 
-A request hook on the shared `httpx.AsyncClient` runs before the first request and before every redirect hop (confirmed by experiment). It applies the same validation to each redirect target and, unless `--allow-private` is set, raises `blocked_address` unless every address the host resolves to is public by `ipaddress.is_global`. An address that changes between this check and the connection is not detected. Redirect hops are not rate limited.
+A request hook on the shared `httpx.AsyncClient` runs before the first request and before every redirect hop (confirmed by experiment). It applies the same validation to each redirect target and, unless `--allow-private` is set, raises `blocked_address` unless every address the host resolves to is public: `ipaddress.is_global`, not multicast, not in 192.0.0.0/24 or 192.88.99.0/24, and an IPv6 address that embeds an IPv4 one (mapped, NAT64, IPv4-compatible) is judged by that IPv4 address. Because httpx resolves the name again to connect, a response hook also checks the address actually connected to, on every hop and before the body is read; this stops DNS rebinding from reading an internal response, although the request itself has been sent. If the connected address cannot be read (a socket reset straight after answering), the response is refused with a message saying the address could not be confirmed (fail closed). The client ignores proxy settings from the environment so that the connected address is the real server. Redirect hops are not rate limited.
 
-A non-2xx final response, including a redirect with no `Location`, is `http_status`. A 2xx must have media type `text/html` or `application/xhtml+xml`, checked before the body is read, else `not_html`. The decoded size is counted as the body streams and the attempt ends with `too_large` past `--max-bytes`. The body is decoded with the response charset, or UTF-8, replacing undecodable bytes.
+A non-2xx final response, including a redirect with no `Location`, is `http_status`. A 2xx must have media type `text/html` or `application/xhtml+xml`, checked before the body is read, else `not_html`. A declared `Content-Length` over `--max-bytes` fails at once. `linkx` asks only for gzip or deflate and decompresses them itself in bounded steps, so the body never grows past `--max-bytes` before the attempt ends with `too_large`; any other content encoding is `unexpected`. The body is decoded with the response charset, or UTF-8 when the charset is unknown or not a text encoding, replacing undecodable bytes.
 
-Exceptions map to kinds as follows: `TimeoutError` and `httpx.TimeoutException` to `timeout`; a resolver failure or any other `httpx.TransportError` to `connect`; `httpx.TooManyRedirects` to `too_many_redirects`; `httpx.InvalidURL` to `invalid_url`; any other `Exception` to `unexpected`. `CancelledError` is not an `Exception` and passes through.
+Exceptions map to kinds as follows: `TimeoutError` and `httpx.TimeoutException` to `timeout`; a resolver failure or any other `httpx.TransportError` to `connect`; `httpx.TooManyRedirects` to `too_many_redirects`; `httpx.InvalidURL`, raised for a redirect to a non-web URL such as `javascript:`, to `invalid_url`; any other `Exception` to `unexpected`. An unparseable redirect `Location` reaches `linkx` as `httpx.RemoteProtocolError`, so it is `connect` and retried. `CancelledError` is not an `Exception` and passes through.
 
 `--retries R` allows up to R further attempts. `timeout`, `connect`, 5xx and 429 are retried; nothing else is. Before retry k (from 1) the fetcher sleeps a random time between 0 and `min(5, 0.5 * 2**k)` seconds. `Retry-After` is ignored.
 
@@ -139,14 +139,16 @@ A policy is one async function, `put(queue, result) -> FetchResult | None`, retu
 
 ```text
 Pipeline.run:
-    async with TaskGroup:                 # consumers
-        start M consumers
-        try:
-            async with TaskGroup:         # fetch workers
-                start N workers
-        finally:
-            queue.shutdown()
-    return Summary from sink.close(interrupted)
+    with SIGINT handler calling interrupt():
+        async with TaskGroup:             # consumers
+            start M consumers
+            try:
+                async with TaskGroup:     # fetch workers
+                    start N workers
+            finally:
+                queue.shutdown()
+        summary = sink.close(interrupted)
+    return summary
 
 Pipeline.interrupt:                       # called on the loop
     first call:  cancel the worker tasks
@@ -155,17 +157,17 @@ Pipeline.interrupt:                       # called on the loop
 
 `interrupt()` records that it was called. `run` starts no workers if that has already happened, and `interrupted` is true whenever it was called, which is also the rule for exit 130.
 
-`run` installs a `SIGINT` handler that schedules `interrupt()` on the loop with `call_soon_threadsafe`, and restores the previous handler before it returns. A cancelled child task does not fail its group, so `run` returns normally on either interrupt. A `KeyboardInterrupt` outside that span, such as while reading the input, is caught in `cli.py`, which exits 130; no records exist yet.
+`run` installs a `SIGINT` handler that schedules `interrupt()` on the loop with `call_soon_threadsafe`, and restores the previous handler after the sink is closed, so a late Ctrl-C cannot cut the closing records or the summary short. A second Ctrl-C records the job whose parse is running as `cancelled`; that parse thread still finishes before the process exits. A cancelled child task does not fail its group, so `run` returns normally on either interrupt. A `KeyboardInterrupt` outside that span, such as while reading the input, is caught in `cli.py`, which exits 130; no records exist yet.
 
 `Sink.emit` raises on a repeated index; otherwise it marks the index as written, then writes and flushes the line. `Sink.close(interrupted)` emits a `cancelled` record for each index with no record if the run was interrupted, and raises if one is missing on an uninterrupted run: that is a bug, not a result.
 
 ### Failure handling
 
-An output failure or a bug is not caught in the pipeline: `emit` is outside the fetcher's and the parse call's catches. The failing task ends, the groups cancel the rest, and `cli.py` reports the error and exits 1 without writing further records.
+An output failure or a bug is not caught in the pipeline: `emit` is outside the fetcher's and the parse call's catches. The failing task ends, the groups cancel the rest, and `cli.py` reports the error and exits 1. The sink refuses every write after one has failed, so no record follows a gap.
 
 ### Record and outcomes
 
-One JSON object per line, UTF-8, `\n` endings, in completion order:
+One JSON object per line, UTF-8, `\n` endings, in completion order. U+2028, U+2029 and U+0085 are escaped so that no line splitter breaks a record:
 
 ```json
 {"index": 0, "url": "...", "final_url": "...", "outcome": "ok", "http_status": 200,
@@ -180,7 +182,7 @@ One JSON object per line, UTF-8, `\n` endings, in completion order:
 | `dropped` | evicted from the queue | `null` | the fetch's error, or `null` |
 | `cancelled` | no record when an interrupted run ended | `null` | `null` |
 
-Fetch error kinds: `invalid_url`, `blocked_address`, `timeout`, `connect`, `too_many_redirects`, `http_status`, `not_html`, `too_large`, `unexpected`. `final_url` and `http_status` are `null` when no response arrived. `elapsed_ms` and `attempts` are `null` for `cancelled`; otherwise `elapsed_ms` is the whole fetch including limiter waits, retries and backoff.
+Fetch error kinds: `invalid_url`, `blocked_address`, `timeout`, `connect`, `too_many_redirects`, `http_status`, `not_html`, `too_large`, `unexpected`. `final_url` and `http_status` are `null` when the failure happened before a response to the final request arrived; a hop refused by the address check has none either. `elapsed_ms` and `attempts` are `null` for `cancelled`; otherwise `elapsed_ms` is the whole fetch including limiter waits, retries and backoff.
 
 ### Command line
 
@@ -192,7 +194,7 @@ linkx URL_OR_FILE [URL_OR_FILE ...] [--out FILE] [--keep-duplicates]
       [--per-host-delay 0] [--allow-private] [--verbose] [--log-json]
 ```
 
-`--concurrency`, `--consumers`, `--queue-max` and `--max-bytes` must be at least 1; `--timeout` above 0; `--retries` and `--per-host-delay` at least 0. `--out` truncates; without it records go to stdout. The summary and logs go to stderr.
+`--concurrency`, `--consumers`, `--queue-max` and `--max-bytes` must be at least 1; `--timeout` above 0; `--retries` and `--per-host-delay` at least 0. Upper bounds stop a typo from hanging or exhausting memory: 1,000 workers, 64 consumers, a queue of 1,000,000, 1 GB per body, 10 retries, 3,600 s for the timeout and the per-host delay. Every value must be a finite number. `--out` truncates; without it records go to stdout. The summary and logs go to stderr.
 
 | Exit code | Meaning |
 | --- | --- |

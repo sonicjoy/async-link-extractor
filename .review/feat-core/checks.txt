@@ -1,0 +1,389 @@
+# Step 1 checks at HEAD 25ed227, 2026-11-19T21:39:48
+# linkx keeps no user data or settings (no config file, home folder or database); tests write only to pytest tmp_path. No stand-in folders were needed.
+
+$ uv run ruff format --check
+29 files already formatted
+[exit 0]
+
+$ uv run ruff check
+All checks passed!
+[exit 0]
+
+$ uv run mypy
+Success: no issues found in 20 source files
+[exit 0]
+
+$ uv run pytest --cov --cov-report=term-missing --cov-fail-under=95 -q
+........................................................................ [ 38%]
+........................................................................ [ 77%]
+...........................................                              [100%]
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.15.2-final-0 _______________
+
+Name                     Stmts   Miss Branch BrPart  Cover   Missing
+--------------------------------------------------------------------
+src\linkx\__init__.py        3      0      0      0   100%
+src\linkx\__main__.py        3      0      0      0   100%
+src\linkx\cli.py           160      0     36      0   100%
+src\linkx\fetch.py         151      0     26      0   100%
+src\linkx\models.py         78      0      0      0   100%
+src\linkx\overflow.py       10      0      0      0   100%
+src\linkx\parse.py          43      0     18      0   100%
+src\linkx\pipeline.py      117      0     14      0   100%
+src\linkx\ratelimit.py      17      0      4      0   100%
+src\linkx\sink.py           45      0     14      0   100%
+--------------------------------------------------------------------
+TOTAL                      627      0    112      0   100%
+Required test coverage of 95% reached. Total coverage: 100.00%
+187 passed in 5.10s
+[exit 0]
+
+$ uv run --isolated --python 3.13 --with-editable . --with pytest --with pytest-asyncio pytest -q -p no:cacheprovider
+Installed 23 packages in 335ms
+........................................................................ [ 38%]
+........................................................................ [ 77%]
+...........................................                              [100%]
+187 passed in 4.93s
+[exit 0]
+
+$ uv run --isolated --python 3.14 --with-editable . --with pytest --with pytest-asyncio pytest -q -p no:cacheprovider
+Installed 23 packages in 284ms
+........................................................................ [ 38%]
+........................................................................ [ 77%]
+...........................................                              [100%]
+187 passed in 4.99s
+[exit 0]
+
+$ uv run python scripts/demo_backpressure.py
+200 jobs, 20 fetch workers, queue of 10, 1,000 links per page
+Python 3.15.2, GIL on
+
+policy                        ok  dropped  seconds  max depth
+drop-oldest, 1 consumer       12      188     0.18         10
+block, 1 consumer            200        0     2.18         10
+block, 4 consumers           200        0     2.16         10
+[exit 0]
+
+# New tests against base (main) code: a worktree at main with tests/ copied in
+$ uv run pytest tests   (in worktree at main)
+error: Failed to build `linkx @ <scratch worktree>`
+  cause: The build backend returned an error
+             raise OSError(message)
+         OSError: Readme file does not exist: README.md
+
+# New tests against base (main) code: worktree at main, branch tests/ copied in, no linkx package present
+$ uv run --no-project pytest -o asyncio_mode=auto tests   (in worktree at main)
+E   ModuleNotFoundError: No module named 'linkx'
+E   ModuleNotFoundError: No module named 'linkx'
+E   ModuleNotFoundError: No module named 'linkx'
+E   ModuleNotFoundError: No module named 'linkx'
+E   ModuleNotFoundError: No module named 'linkx'
+E   ModuleNotFoundError: No module named 'linkx'
+E   ModuleNotFoundError: No module named 'linkx'
+E   ModuleNotFoundError: No module named 'linkx'
+E   ModuleNotFoundError: No module named 'linkx'
+ERROR tests/test_cli.py
+ERROR tests/test_e2e.py
+ERROR tests/test_fetch.py
+ERROR tests/test_models.py
+ERROR tests/test_overflow.py
+ERROR tests/test_parse.py
+ERROR tests/test_pipeline.py
+ERROR tests/test_ratelimit.py
+ERROR tests/test_sink.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 9 errors during collection !!!!!!!!!!!!!!!!!!!
+9 errors in 0.84s
+Result: every test module fails to import linkx on base, i.e. all 187 tests fail there because the feature is missing.
+Limitation: this proves only that the tests need the new code, not that each test checks its specific behaviour; mutation-style checks for key lines are in evidence/boundary.txt and evidence/stress.txt.
+
+# Fix round 1: new tests before the fixes (expected to fail)
+$ uv run pytest -q -rfE
+ImportError while importing test module 'tests\test_cli.py'.
+E   ImportError: cannot import name 'settings_from' from 'linkx.cli' (src\linkx\cli.py)
+ERROR tests/test_cli.py
+$ uv run pytest -q -rfE --continue-on-collection-errors
+error = FetchError(kind=<ErrorKind.TIMEOUT: 'timeout'>, message='late')
+FAILED tests/test_fetch.py::test_compressed_pages_are_decoded[x-gzip-compress]
+FAILED tests/test_fetch.py::test_unsupported_or_corrupt_encoding_is_an_error[br-\x1b\x00\x00]
+FAILED tests/test_fetch.py::test_unsupported_or_corrupt_encoding_is_an_error[gzip-not gzip at all]
+FAILED tests/test_fetch.py::test_unsupported_or_corrupt_encoding_is_an_error[gzip, br-x]
+FAILED tests/test_fetch.py::test_non_text_or_unusable_charset_falls_back_to_utf8[base64]
+FAILED tests/test_fetch.py::test_non_text_or_unusable_charset_falls_back_to_utf8[rot13]
+FAILED tests/test_fetch.py::test_non_text_or_unusable_charset_falls_back_to_utf8[hex]
+FAILED tests/test_fetch.py::test_non_text_or_unusable_charset_falls_back_to_utf8[utf-16]
+FAILED tests/test_fetch.py::test_is_public[64:ff9b::a9fe:a9fe-False] - Assert...
+FAILED tests/test_fetch.py::test_is_public[64:ff9b::7f00:1-False] - Assertion...
+FAILED tests/test_fetch.py::test_is_public[::127.0.0.1-False] - AssertionErro...
+FAILED tests/test_fetch.py::test_is_public[192.0.0.9-False] - AssertionError:...
+FAILED tests/test_fetch.py::test_is_public[192.88.99.1-False] - AssertionErro...
+FAILED tests/test_models.py::test_unicode_line_separators_are_escaped - asser...
+FAILED tests/test_models.py::test_fetch_result_has_exactly_one_of_html_and_error[None-None]
+FAILED tests/test_models.py::test_fetch_result_has_exactly_one_of_html_and_error[<p>-error1]
+FAILED tests/test_pipeline.py::test_an_output_failure_stops_all_further_writes
+FAILED tests/test_sink.py::test_nothing_is_written_after_a_failed_write - Fai...
+ERROR tests/test_cli.py
+18 failed, 153 passed, 1 error in 5.54s
+
+# Re-run after fix round 1 at HEAD 49bf5b3, 2026-11-19T22:02:46
+
+$ uv run ruff format --check
+29 files already formatted
+[exit 0]
+
+$ uv run ruff check
+All checks passed!
+[exit 0]
+
+$ uv run mypy
+Success: no issues found in 20 source files
+[exit 0]
+
+$ uv run pytest --cov --cov-report=term-missing --cov-fail-under=95 -q
+src\linkx\parse.py          43      0     18      0   100%
+src\linkx\pipeline.py      117      0     14      0   100%
+src\linkx\ratelimit.py      17      0      4      0   100%
+src\linkx\sink.py           52      0     16      0   100%
+--------------------------------------------------------------------
+TOTAL                      678      0    134      0   100%
+Required test coverage of 95% reached. Total coverage: 100.00%
+223 passed in 5.53s
+[exit 0]
+
+$ uv run --isolated --python 3.13 --with-editable . --with pytest --with pytest-asyncio pytest -q -p no:cacheprovider
+Installed 23 packages in 293ms
+........................................................................ [ 32%]
+........................................................................ [ 64%]
+........................................................................ [ 96%]
+.......                                                                  [100%]
+223 passed in 5.43s
+[exit 0]
+
+$ uv run --isolated --python 3.14 --with-editable . --with pytest --with pytest-asyncio pytest -q -p no:cacheprovider
+Installed 23 packages in 277ms
+........................................................................ [ 32%]
+........................................................................ [ 64%]
+........................................................................ [ 96%]
+.......                                                                  [100%]
+223 passed in 5.55s
+[exit 0]
+
+$ uv run python scripts/demo_backpressure.py
+200 jobs, 20 fetch workers, queue of 10, 1,000 links per page
+Python 3.15.2, GIL on
+
+policy                        ok  dropped  seconds  max depth
+drop-oldest, 1 consumer       12      188     0.18         10
+block, 1 consumer            200        0     2.22         10
+block, 4 consumers           200        0     2.21         10
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/boundary.py
+PASS  retries: 2 failures then success is ok on attempt 3  [ok, 3]
+PASS  retries: 3 failures is http_status after 3 attempts  [http_status, 3]
+PASS  retries: next ordinary request still succeeds  [ok]
+PASS  queue_max=5: depth never exceeds 5  [5, 5]
+PASS  queue_max: drop-oldest drops and still accounts for all 30  [dropped=25, records=30]
+PASS  queue_max: block drops none and accounts for all 30  [dropped=0, records=30]
+
+18 passed, 0 failed
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/generated.py
+seed 20261119: 20000 pages, 20000 URLs, 6500 reserved addresses
+0 property violations
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/stress.py
+seed 7: 300 randomised runs, 0 failed
+[exit 0]
+
+# Fix round 2 (user chose: check the connected IP): new tests before the fix
+$ uv run pytest -q -rfE
+FAILED tests/test_e2e.py::test_dns_rebinding_to_loopback_is_refused - Asserti...
+FAILED tests/test_fetch.py::test_connection_that_reached_a_private_address_is_refused
+FAILED tests/test_fetch.py::test_redirect_hop_that_connected_to_a_private_address_is_refused
+FAILED tests/test_fetch.py::test_client_ignores_proxy_settings_from_the_environment
+4 failed, 225 passed in 6.13s
+
+# Fix round 2b (findings from fix-review-round1): new tests before the fixes
+$ uv run pytest -q -rfE
+ERROR    linkx:cli.py:288 run failed: output failed earlier; no further records are written
+FAILED tests/test_cli.py::test_a_huge_integer_option_is_accepted_not_a_crash
+FAILED tests/test_cli.py::test_a_path_with_a_null_character_is_a_usage_error[--out]
+FAILED tests/test_cli.py::test_a_path_with_a_null_character_is_a_usage_error[input]
+FAILED tests/test_cli.py::test_the_first_output_error_is_the_one_reported - a...
+FAILED tests/test_fetch.py::test_redirect_bodies_are_never_read - AssertionEr...
+FAILED tests/test_fetch.py::test_every_known_codec_name_decodes_or_falls_back
+FAILED tests/test_fetch.py::test_non_text_or_unusable_charset_falls_back_to_utf8[idna]
+FAILED tests/test_fetch.py::test_non_text_or_unusable_charset_falls_back_to_utf8[undefined]
+8 failed, 234 passed in 6.41s
+
+# Re-run after fix round 2 at HEAD b8ff835, 2026-11-19T22:17:24
+
+$ uv run ruff format --check
+29 files already formatted
+[exit 0]
+
+$ uv run ruff check
+All checks passed!
+[exit 0]
+
+$ uv run mypy
+Success: no issues found in 20 source files
+[exit 0]
+
+$ uv run pytest --cov --cov-report=term-missing --cov-fail-under=95 -q
+src\linkx\parse.py          43      0     18      0   100%
+src\linkx\pipeline.py      117      0     14      0   100%
+src\linkx\ratelimit.py      17      0      4      0   100%
+src\linkx\sink.py           53      0     16      0   100%
+--------------------------------------------------------------------
+TOTAL                      701      0    148      0   100%
+Required test coverage of 95% reached. Total coverage: 100.00%
+243 passed in 6.46s
+[exit 0]
+
+$ uv run --isolated --python 3.13 --with-editable . --with pytest --with pytest-asyncio pytest -q -p no:cacheprovider
+Installed 23 packages in 277ms
+........................................................................ [ 29%]
+........................................................................ [ 59%]
+........................................................................ [ 88%]
+...........................                                              [100%]
+243 passed in 6.53s
+[exit 0]
+
+$ uv run --isolated --python 3.14 --with-editable . --with pytest --with pytest-asyncio pytest -q -p no:cacheprovider
+Installed 23 packages in 333ms
+........................................................................ [ 29%]
+........................................................................ [ 59%]
+........................................................................ [ 88%]
+...........................                                              [100%]
+243 passed in 5.86s
+[exit 0]
+
+$ uv run python scripts/demo_backpressure.py
+200 jobs, 20 fetch workers, queue of 10, 1,000 links per page
+Python 3.15.2, GIL on
+
+policy                        ok  dropped  seconds  max depth
+drop-oldest, 1 consumer       12      188     0.18         10
+block, 1 consumer            200        0     2.31         10
+block, 4 consumers           200        0     2.47         10
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/boundary.py
+PASS  retries: 2 failures then success is ok on attempt 3  [ok, 3]
+PASS  retries: 3 failures is http_status after 3 attempts  [http_status, 3]
+PASS  retries: next ordinary request still succeeds  [ok]
+PASS  queue_max=5: depth never exceeds 5  [5, 5]
+PASS  queue_max: drop-oldest drops and still accounts for all 30  [dropped=25, records=30]
+PASS  queue_max: block drops none and accounts for all 30  [dropped=0, records=30]
+
+18 passed, 0 failed
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/generated.py
+seed 20261119: 20000 pages, 20000 URLs, 6500 reserved addresses
+0 property violations
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/stress.py
+seed 7: 300 randomised runs, 0 failed
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/mutants_round2.py
+KILLED  inflate without +1  FAILED tests/test_fetch.py::test_decompression_bomb_never_holds_much_more_than_the_cap
+KILLED  sink closed outside the Ctrl-C span  FAILED tests/test_pipeline.py::test_ctrl_c_while_the_sink_closes_is_still_handled_by_the_pipeline
+KILLED  httpx follows redirects (reads 3xx bodies)  FAILED tests/test_fetch.py::test_redirect_is_followed_and_final_url_reported
+KILLED  CLI reports the first leaf  FAILED tests/test_cli.py::test_the_first_output_error_is_the_one_reported - a...
+KILLED  charset fallback catches LookupError only  FAILED tests/test_fetch.py::test_every_known_codec_name_decodes_or_falls_back
+5/5 mutants killed
+[exit 0]
+$ uv run pytest -q -rfE (bound tests deselected: before the fix they hang, because --retries 999...9 retries forever and --per-host-delay 3601 waits an hour; that hang is the failure)
+FAILED tests/test_e2e.py::test_redirects_release_their_connection - Assertion...
+FAILED tests/test_fetch.py::test_connection_whose_address_cannot_be_read_is_refused
+FAILED tests/test_fetch.py::test_redirect_to_a_non_web_url_is_invalid_and_not_retried[javascript:alert(1)]
+FAILED tests/test_fetch.py::test_redirect_to_a_non_web_url_is_invalid_and_not_retried[mailto:a@b.test]
+4 failed, 242 passed, 8 deselected in 6.93s
+
+# Re-run after fix set 3 at HEAD 1591d2c, 2026-11-19T23:04:55
+
+$ uv run ruff format --check
+29 files already formatted
+[exit 0]
+
+$ uv run ruff check
+All checks passed!
+[exit 0]
+
+$ uv run mypy
+Success: no issues found in 20 source files
+[exit 0]
+
+$ uv run pytest --cov --cov-report=term-missing --cov-fail-under=95 -q
+src\linkx\ratelimit.py      17      0      4      0   100%
+src\linkx\sink.py           53      0     16      0   100%
+--------------------------------------------------------------------
+TOTAL                      708      0    152      0   100%
+Required test coverage of 95% reached. Total coverage: 100.00%
+254 passed in 7.12s
+[exit 0]
+
+$ uv run --isolated --python 3.13 --with-editable . --with pytest --with pytest-asyncio pytest -q -p no:cacheprovider
+Installed 23 packages in 291ms
+........................................................................ [ 28%]
+........................................................................ [ 56%]
+........................................................................ [ 85%]
+......................................                                   [100%]
+254 passed in 7.22s
+[exit 0]
+
+$ uv run --isolated --python 3.14 --with-editable . --with pytest --with pytest-asyncio pytest -q -p no:cacheprovider
+Installed 23 packages in 348ms
+........................................................................ [ 28%]
+........................................................................ [ 56%]
+........................................................................ [ 85%]
+......................................                                   [100%]
+254 passed in 6.91s
+[exit 0]
+
+$ uv run python scripts/demo_backpressure.py
+Python 3.15.2, GIL on
+
+policy                        ok  dropped  seconds  max depth
+drop-oldest, 1 consumer       12      188     0.18         10
+block, 1 consumer            200        0     2.28         10
+block, 4 consumers           200        0     2.24         10
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/boundary.py
+PASS  retries: next ordinary request still succeeds  [ok]
+PASS  queue_max=5: depth never exceeds 5  [5, 5]
+PASS  queue_max: drop-oldest drops and still accounts for all 30  [dropped=25, records=30]
+PASS  queue_max: block drops none and accounts for all 30  [dropped=0, records=30]
+
+18 passed, 0 failed
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/generated.py
+seed 20261119: 20000 pages, 20000 URLs, 6500 reserved addresses
+0 property violations
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/stress.py
+seed 7: 300 randomised runs, 0 failed
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/gzip_bomb.py
+           ~~~~~~~~~~~~~~~~~~~~^^^
+----------------------------------------
+----------------------------------------
+bomb: 260934 bytes compressed, 268435456 bytes decompressed, no Content-Length
+10 jobs, 10 workers, max_bytes 1000: outcomes {<Outcome.OK: 'ok'>: 0, <Outcome.FETCH_ERROR: 'fetch_error'>: 10, <Outcome.PARSE_ERROR: 'parse_error'>: 0, <Outcome.DROPPED: 'dropped'>: 0, <Outcome.CANCELLED: 'cancelled'>: 0}
+peak traced memory: 10.9 MB
+[exit 0]
+
+$ uv run python .review/feat-core/evidence/rebind_reset.py
+40 fetches of an internal page that resets after answering: {'blocked_address': 40}
+records with internal links written out: 0
+[exit 0]

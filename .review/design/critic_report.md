@@ -1,6 +1,6 @@
 # Goldfish Review Report
 
-**Target:** `C:\Users\sonic\source\repos\async-link-extractor\docs\designs\linkx.md` (lines 1-226)
+**Target:** `docs\designs\linkx.md` (lines 1-226)
 
 Stage 7, Critic Review. No reviewer could run code. Every statement about asyncio or httpx behaviour below is from memory and marked "unverified".
 

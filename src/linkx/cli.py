@@ -1,0 +1,355 @@
+"""Command-line entry point: read inputs, run the pipeline, report, choose the exit code."""
+
+import argparse
+import asyncio
+import contextlib
+import json
+import logging
+import math
+import os
+import sys
+from collections.abc import Callable, Sequence
+from dataclasses import asdict, replace
+from datetime import UTC, datetime
+from typing import TextIO
+from urllib.parse import urlsplit, urlunsplit
+
+import httpx
+
+from linkx.fetch import DEFAULT_PORTS
+from linkx.models import Job, Outcome, Settings, Summary
+from linkx.overflow import POLICIES
+from linkx.pipeline import extract
+from linkx.sink import OutputFailed
+
+log = logging.getLogger("linkx")
+
+EXIT_OK = 0
+EXIT_FAILURE = 1
+EXIT_USAGE = 2
+EXIT_INTERRUPTED = 130
+DEFAULTS = Settings()
+
+
+# --- arguments ---------------------------------------------------------------------------
+
+
+def _bounded[T: (int, float)](
+    convert: Callable[[str], T], *, minimum: T, maximum: T, inclusive: bool = True
+) -> Callable[[str], T]:
+    """Build an argparse type that converts a value and enforces its bounds. The upper
+    bounds are far above any real use; they stop a typo from hanging or exhausting memory."""
+
+    def parse(text: str) -> T:
+        try:
+            value = convert(text)
+        except ValueError:
+            raise argparse.ArgumentTypeError(f"not a number: {text!r}") from None
+        # nan passes every comparison and inf disables a limit. Only floats can be either;
+        # math.isfinite on a huge int would raise OverflowError instead.
+        if isinstance(value, float) and not math.isfinite(value):
+            raise argparse.ArgumentTypeError(f"must be a finite number, got {text}")
+        if value < minimum or (not inclusive and value == minimum):
+            relation = "at least" if inclusive else "above"
+            raise argparse.ArgumentTypeError(f"must be {relation} {minimum}, got {text}")
+        if value > maximum:
+            raise argparse.ArgumentTypeError(f"must be at most {maximum}, got {text}")
+        return value
+
+    return parse
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="linkx",
+        description="Fetch pages concurrently and write the links on each one as JSON lines.",
+    )
+    parser.add_argument(
+        "inputs",
+        nargs="+",
+        metavar="URL_OR_FILE",
+        help="a URL starting with http:// or https://, or a file with one URL per line",
+    )
+    parser.add_argument("--out", metavar="FILE", help="write records here instead of stdout")
+    parser.add_argument(
+        "--keep-duplicates", action="store_true", help="fetch repeated URLs once per occurrence"
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=_bounded(int, minimum=1, maximum=1000),
+        default=DEFAULTS.concurrency,
+        help="fetch workers",
+    )
+    parser.add_argument(
+        "--consumers",
+        type=_bounded(int, minimum=1, maximum=64),
+        default=DEFAULTS.consumers,
+        help="parsing consumers",
+    )
+    parser.add_argument(
+        "--queue-max",
+        type=_bounded(int, minimum=1, maximum=1_000_000),
+        default=DEFAULTS.queue_max,
+        help="queue capacity",
+    )
+    parser.add_argument(
+        "--queue-policy",
+        choices=list(POLICIES),
+        default=DEFAULTS.queue_policy,
+        help="what a fetch worker does when the queue is full",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=_bounded(float, minimum=0.0, maximum=3600.0, inclusive=False),
+        default=DEFAULTS.timeout,
+        help="seconds per fetch attempt",
+    )
+    parser.add_argument(
+        "--retries",
+        type=_bounded(int, minimum=0, maximum=10),
+        default=DEFAULTS.retries,
+        help="extra attempts per URL",
+    )
+    parser.add_argument(
+        "--max-bytes",
+        type=_bounded(int, minimum=1, maximum=1_000_000_000),
+        default=DEFAULTS.max_bytes,
+        help="largest body accepted",
+    )
+    parser.add_argument(
+        "--per-host-delay",
+        type=_bounded(float, minimum=0.0, maximum=3600.0),
+        default=DEFAULTS.per_host_delay,
+        help="minimum seconds between requests to one host",
+    )
+    parser.add_argument(
+        "--allow-private",
+        action="store_true",
+        help="allow loopback, private and link-local addresses",
+    )
+    parser.add_argument("--verbose", action="store_true", help="log each attempt and record")
+    parser.add_argument("--log-json", action="store_true", help="write logs as JSON lines")
+    return parser
+
+
+# --- inputs ------------------------------------------------------------------------------
+
+
+def read_urls(sources: Sequence[str]) -> list[str]:
+    """URLs from arguments and files, in order. Raises OSError for an unreadable file and
+    UnicodeDecodeError for one that is not UTF-8."""
+    urls: list[str] = []
+    for source in sources:
+        if source.lower().startswith(("http://", "https://")):
+            urls.append(source)
+            continue
+        with open(source, encoding="utf-8-sig") as lines:
+            for line in lines:
+                url = line.strip()
+                if url and not url.startswith("#"):
+                    urls.append(url)
+    return urls
+
+
+def dedupe_key(url: str) -> str:
+    """Normalise only what cannot change the response: scheme and host case, an empty
+    path, a default port and the fragment."""
+    try:
+        parts = urlsplit(url.strip())
+        port = parts.port
+    except ValueError:
+        return url
+    scheme = parts.scheme.lower()
+    host = parts.hostname or ""
+    if ":" in host:  # IPv6 literal: hostname drops the brackets
+        host = f"[{host}]"
+    if port is not None and port != DEFAULT_PORTS.get(scheme):
+        host = f"{host}:{port}"
+    userinfo = parts.netloc.rpartition("@")[0]
+    netloc = f"{userinfo}@{host}" if userinfo else host
+    return urlunsplit((scheme, netloc, parts.path or "/", parts.query, ""))
+
+
+def make_jobs(urls: Sequence[str], *, keep_duplicates: bool) -> tuple[list[Job], int]:
+    """Number the URLs as jobs, skipping repeats unless asked not to."""
+    seen: set[str] = set()
+    jobs: list[Job] = []
+    for url in urls:
+        if not keep_duplicates:
+            key = dedupe_key(url)
+            if key in seen:
+                continue
+            seen.add(key)
+        jobs.append(Job(len(jobs), url))
+    return jobs, len(urls) - len(jobs)
+
+
+# --- logging -----------------------------------------------------------------------------
+
+_RECORD_ATTRIBUTES = frozenset(vars(logging.makeLogRecord({}))) | {"message", "asctime"}
+
+
+class JsonFormatter(logging.Formatter):
+    """One JSON object per log line; `extra` fields become top-level keys."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        data: dict[str, object] = {
+            "time": datetime.fromtimestamp(record.created, UTC).isoformat(timespec="milliseconds"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        data.update((k, v) for k, v in vars(record).items() if k not in _RECORD_ATTRIBUTES)
+        if record.exc_info:
+            data["exception"] = self.formatException(record.exc_info)
+        return json.dumps(data, ensure_ascii=False, default=str)
+
+
+def configure_logging(*, verbose: bool, json_logs: bool) -> None:
+    handler = logging.StreamHandler(sys.stderr)
+    if json_logs:
+        handler.setFormatter(JsonFormatter())
+    else:
+        handler.setFormatter(
+            logging.Formatter("%(asctime)s %(levelname)-7s %(message)s", "%H:%M:%S")
+        )
+    for old in list(log.handlers):
+        log.removeHandler(old)
+    log.addHandler(handler)
+    log.setLevel(logging.DEBUG if verbose else logging.INFO)
+
+
+def format_summary(summary: Summary) -> str:
+    skipped = summary.duplicates_skipped
+    duplicates = f" (duplicates skipped: {skipped})" if skipped else ""
+    outcomes = ", ".join(f"{outcome} {summary.counts.get(outcome, 0)}" for outcome in Outcome)
+    if summary.p95_ms is None:
+        latency = "no fetches"
+    else:
+        latency = f"p50 {summary.p50_ms}, p95 {summary.p95_ms}, max {summary.max_ms}"
+    return (
+        f"summary: {summary.jobs} jobs{duplicates}, {summary.duration_s:.2f}s"
+        f"{' (interrupted)' if summary.interrupted else ''}\n"
+        f"  outcomes: {outcomes}\n"
+        f"  retries {summary.retries}, max queue depth {summary.max_queue_depth}\n"
+        f"  fetch latency ms: {latency}"
+    )
+
+
+# --- main --------------------------------------------------------------------------------
+
+
+def _open_output(path: str | None) -> TextIO:
+    """The --out file (closed by main), or stdout switched to UTF-8 with \\n line ends."""
+    if path is not None:
+        return open(path, "w", encoding="utf-8", newline="\n")
+    # A replaced stream may lack reconfigure, or refuse to change.
+    with contextlib.suppress(AttributeError, ValueError):
+        sys.stdout.reconfigure(encoding="utf-8", newline="\n")  # type: ignore[union-attr]
+    return sys.stdout
+
+
+def _root_cause(exc: BaseException) -> BaseException:
+    """The error to report from a (possibly nested) exception group from the TaskGroups.
+
+    After one write fails, other tasks are refused with OutputFailed; the first failure
+    is the one the operator needs, so it is preferred to those."""
+    leaves: list[BaseException] = []
+    pending = [exc]
+    while pending:
+        current = pending.pop(0)
+        if isinstance(current, BaseExceptionGroup):
+            pending[:0] = current.exceptions
+        else:
+            leaves.append(current)
+    for leaf in leaves:
+        if not isinstance(leaf, OutputFailed):
+            return leaf
+    return leaves[0].__cause__ or leaves[0]
+
+
+def _silence_stdout() -> None:
+    """After a broken pipe, point stdout at devnull so the interpreter's final flush
+    cannot fail again and replace our exit code."""
+    with contextlib.suppress(OSError, ValueError, AttributeError):
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+
+
+def settings_from(args: argparse.Namespace) -> Settings:
+    return Settings(
+        concurrency=args.concurrency,
+        consumers=args.consumers,
+        queue_max=args.queue_max,
+        queue_policy=args.queue_policy,
+        timeout=args.timeout,
+        retries=args.retries,
+        max_bytes=args.max_bytes,
+        per_host_delay=args.per_host_delay,
+        allow_private=args.allow_private,
+    )
+
+
+def _run(
+    jobs: list[Job],
+    settings: Settings,
+    stream: TextIO,
+    transport: httpx.AsyncBaseTransport | None,
+) -> Summary | int:
+    """Run the pipeline. Returns the summary, or an exit code if the run failed."""
+    try:
+        return asyncio.run(extract(jobs, settings, stream, transport=transport))
+    except KeyboardInterrupt:  # Ctrl-C outside the pipeline's own handler
+        log.warning("interrupted", extra={"event": "interrupt"})
+        return EXIT_INTERRUPTED
+    except Exception as exc:  # an output failure or a bug: not one URL's problem
+        cause = _root_cause(exc)
+        log.error("run failed: %s", cause, exc_info=cause, extra={"event": "failure"})
+        if isinstance(cause, BrokenPipeError) and stream is sys.stdout:
+            _silence_stdout()
+        return EXIT_FAILURE
+    finally:
+        if stream is not sys.stdout:
+            stream.close()
+
+
+def main(
+    argv: Sequence[str] | None = None, *, transport: httpx.AsyncBaseTransport | None = None
+) -> int:
+    """Run the CLI and return the exit code. `transport` replaces the network in tests."""
+    args = build_parser().parse_args(argv)  # exits 2 on a usage error
+    configure_logging(verbose=args.verbose, json_logs=args.log_json)
+    settings = settings_from(args)
+
+    try:
+        urls = read_urls(args.inputs)
+    except (OSError, ValueError) as exc:  # ValueError: not UTF-8, or a NUL in the path
+        reason = "not UTF-8" if isinstance(exc, UnicodeDecodeError) else exc
+        log.error("cannot read input: %s", reason, extra={"event": "usage_error"})
+        return EXIT_USAGE
+    except KeyboardInterrupt:  # Ctrl-C while reading: the pipeline's handler is not set yet
+        return EXIT_INTERRUPTED
+    jobs, skipped = make_jobs(urls, keep_duplicates=args.keep_duplicates)
+
+    try:
+        stream = _open_output(args.out)
+    except (OSError, ValueError) as exc:  # ValueError: a NUL in the path
+        log.error("cannot open output: %s", exc, extra={"event": "usage_error"})
+        return EXIT_USAGE
+
+    log.info(
+        "start: %d jobs (duplicates skipped: %d), workers %d, consumers %d, queue %d (%s)",
+        len(jobs),
+        skipped,
+        settings.concurrency,
+        settings.consumers,
+        settings.queue_max,
+        settings.queue_policy,
+        extra={"event": "start", "jobs": len(jobs), "settings": asdict(settings)},
+    )
+    outcome = _run(jobs, settings, stream, transport)
+    if isinstance(outcome, int):
+        return outcome
+
+    summary = replace(outcome, duplicates_skipped=skipped)
+    log.info(format_summary(summary), extra={"event": "summary", "summary": summary.as_dict()})
+    return EXIT_INTERRUPTED if summary.interrupted else EXIT_OK

@@ -1,0 +1,24 @@
+$ uv run python .review\feat-core\evidence\generated.py
+seed 20261119: 20000 pages, 20000 URLs, 6500 reserved addresses
+0 property violations
+[exit 0]
+
+$ uv run python .review\feat-core\evidence\generated.py --break   (must fail)
+seed 20261119: 20000 pages, 20000 URLs, 6500 reserved addresses
+FAIL P2 case 0: duplicate in ['http://[::1]:8080/x/<script', 'http://a.test:99999/', 'http://[::1]:8080/x/<script#frag', 'http://[::1]:8080/x/<script']
+FAIL P2 case 0: bad link 'http://[::1]:8080/x/<script#frag'
+FAIL P2 case 1: duplicate in ['https://site.test', 'https://site.test#frag', 'https://site.test']
+FAIL P2 case 1: bad link 'https://site.test#frag'
+FAIL P2 case 2: duplicate in ['http://[::1]:8080/c', 'http://[::1]:8080/x/%zz', 'http://[::1]:8080/x/?q=1', 'http://[::1]:8080/tab', 'http://[::1]:8080/x/', 'http://[::1]:8080/c#frag', 'http://[::1]:8080/c']
+FAIL P2 case 2: bad link 'http://[::1]:8080/c#frag'
+FAIL P2 case 3: duplicate in ['http://site.test/dir/page.html', 'http://site.test/dir/d?x=1', 'http://site.test/dir/page.html#frag', 'http://site.test/dir/page.html']
+FAIL P2 case 3: bad link 'http://site.test/dir/page.html#frag'
+FAIL P2 case 4: duplicate in ['http://site.test/dir/été', 'http://UPPER.TEST/', 'http://site.test/dir/été#frag', 'http://site.test/dir/été']
+FAIL P2 case 4: bad link 'http://site.test/dir/été#frag'
+FAIL P2 case 5: duplicate in ['https://site.test/trim', 'https://site.test/trim#frag', 'https://site.test/trim']
+FAIL P2 case 5: bad link 'https://site.test/trim#frag'
+FAIL P2 case 6: duplicate in ['https://H.TEST:443/G', 'https://H.TEST:443/G#frag', 'https://H.TEST:443/G']
+FAIL P2 case 6: bad link 'https://H.TEST:443/G#frag'
+FAIL P2 case 8: duplicate in ['http://site.test/c', 'http://site.test/c#frag', 'http://site.test/c']
+27256 property violations (wrong extractor, --break)
+[exit 1]
