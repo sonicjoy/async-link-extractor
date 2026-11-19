@@ -4,6 +4,7 @@ import asyncio
 
 import pytest
 
+from linkx.cli import build_parser
 from linkx.overflow import POLICIES, block, drop_oldest
 
 
@@ -68,8 +69,10 @@ async def test_drop_oldest_never_waits_on_a_full_queue() -> None:
     assert queue.get_nowait() == 99
 
 
-def test_policy_table_holds_exactly_the_two_cli_names() -> None:
-    assert {"drop-oldest": drop_oldest, "block": block} == POLICIES
+def test_cli_offers_exactly_the_policies_in_the_table() -> None:
+    action = next(a for a in build_parser()._actions if a.dest == "queue_policy")
+    assert action.choices is not None
+    assert set(action.choices) == set(POLICIES) == {"drop-oldest", "block"}
 
 
 @pytest.mark.parametrize("name", ["drop-oldest", "block"])

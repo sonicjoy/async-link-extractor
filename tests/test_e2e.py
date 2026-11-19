@@ -47,7 +47,9 @@ def closed_port() -> int:
         return int(sock.getsockname()[1])
 
 
-def test_one_bad_url_does_not_affect_the_others(server: str, tmp_path: Path) -> None:
+def test_one_bad_url_does_not_affect_the_others(
+    server: str, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
     dead = f"http://127.0.0.1:{closed_port()}/"
     listing = tmp_path / "urls.txt"
     listing.write_text(
@@ -66,10 +68,16 @@ def test_one_bad_url_does_not_affect_the_others(server: str, tmp_path: Path) -> 
     out = tmp_path / "results.jsonl"
 
     code = main(
-        [str(listing), "--out", str(out), "--allow-private", "--retries", "0", "--timeout", "5"]
+        [
+            *(str(listing), "--out", str(out), "--allow-private"),
+            *("--retries", "0", "--timeout", "5", "--log-json"),
+        ]
     )
 
     assert code == 0
+    events = [json.loads(line) for line in capsys.readouterr().err.splitlines()]
+    summary = next(e["summary"] for e in events if e.get("event") == "summary")
+    assert sum(summary["counts"].values()) == 6 == summary["jobs"]
     records = {r["index"]: r for r in map(json.loads, out.read_text("utf-8").splitlines())}
     assert len(records) == 6
     assert records[0]["outcome"] == "ok"

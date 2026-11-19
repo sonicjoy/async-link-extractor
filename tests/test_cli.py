@@ -14,8 +14,16 @@ import httpx
 import pytest
 
 import linkx.cli
-from linkx.cli import dedupe_key, format_summary, main, make_jobs, read_urls
-from linkx.models import Outcome, Summary
+from linkx.cli import (
+    build_parser,
+    dedupe_key,
+    format_summary,
+    main,
+    make_jobs,
+    read_urls,
+    settings_from,
+)
+from linkx.models import Outcome, Settings, Summary
 
 
 @pytest.fixture(autouse=True)
@@ -94,6 +102,47 @@ def test_out_of_range_options_are_usage_errors(args: list[str]) -> None:
     assert exc.value.code == 2
 
 
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["--timeout", "nan"],
+        ["--timeout", "inf"],
+        ["--per-host-delay", "inf"],
+        ["--per-host-delay", "nan"],
+    ],
+)
+def test_non_finite_numbers_are_usage_errors(args: list[str]) -> None:
+    with pytest.raises(SystemExit) as exc:
+        main(["http://example.com/", *args])
+    assert exc.value.code == 2
+
+
+def test_option_defaults_are_the_settings_defaults() -> None:
+    assert settings_from(build_parser().parse_args(["http://x.test/"])) == Settings()
+
+
+def test_every_option_reaches_the_settings() -> None:
+    args = build_parser().parse_args(
+        [
+            "http://x.test/",
+            *("--concurrency", "3", "--consumers", "2", "--queue-max", "7"),
+            *("--queue-policy", "block", "--timeout", "1.5", "--retries", "4"),
+            *("--max-bytes", "99", "--per-host-delay", "0.25", "--allow-private"),
+        ]
+    )
+    assert settings_from(args) == Settings(
+        concurrency=3,
+        consumers=2,
+        queue_max=7,
+        queue_policy="block",
+        timeout=1.5,
+        retries=4,
+        max_bytes=99,
+        per_host_delay=0.25,
+        allow_private=True,
+    )
+
+
 # --- inputs ------------------------------------------------------------------------------
 
 
@@ -115,6 +164,27 @@ def test_file_lines_are_kept_even_if_not_urls(tmp_path: Path) -> None:
     listing = tmp_path / "urls.txt"
     listing.write_text("example.com\nftp://files.test/\n", encoding="utf-8")
     assert read_urls([str(listing)]) == ["example.com", "ftp://files.test/"]
+
+
+@pytest.mark.parametrize(
+    ("label", "content"),
+    [
+        ("utf-16 with BOM", "http://a.test/\n".encode("utf-16")),
+        ("latin-1", "http://a.test/caf\xe9\n".encode("latin-1")),
+    ],
+)
+def test_input_file_that_is_not_utf8_exits_2(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], label: str, content: bytes
+) -> None:
+    listing = tmp_path / "urls.txt"
+    listing.write_bytes(content)
+    assert run([str(listing)]) == 2
+    assert "not UTF-8" in capsys.readouterr().err
+
+
+def test_keep_duplicates_flag_fetches_each_occurrence(capsys: pytest.CaptureFixture[str]) -> None:
+    assert run(["http://a.test", "http://a.test/", "--keep-duplicates"]) == 0
+    assert len(stdout_records(capsys)) == 2
 
 
 def test_unreadable_input_file_exits_2(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -213,7 +283,7 @@ def test_output_failure_exits_1(
 def test_summary_is_logged_to_stderr(capsys: pytest.CaptureFixture[str]) -> None:
     assert run(["http://a.test/", "http://a.test", "http://missing.test/"]) == 0
     err = capsys.readouterr().err
-    assert "2 jobs (1 duplicate skipped)" in err
+    assert "2 jobs (duplicates skipped: 1)" in err
     assert "ok 1" in err
     assert "fetch_error 1" in err
     assert "p95" in err
@@ -268,8 +338,11 @@ def test_ctrl_c_during_the_run_exits_130_with_every_job_recorded(
         transport=httpx.MockTransport(hang_on_slow),
     )
     assert code == 130
-    records = {r["url"]: r["outcome"] for r in stdout_records(capsys)}
+    captured = capsys.readouterr()
+    records = {r["url"]: r["outcome"] for r in map(json.loads, captured.out.splitlines())}
     assert records == {"http://a.test/": "ok", "http://slow.test/": "cancelled"}
+    assert "summary: 2 jobs" in captured.err
+    assert "(interrupted)" in captured.err
 
 
 def test_ctrl_c_outside_the_pipeline_handler_exits_130(monkeypatch: pytest.MonkeyPatch) -> None:
