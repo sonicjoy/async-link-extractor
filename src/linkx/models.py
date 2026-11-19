@@ -8,7 +8,7 @@ import enum
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 
 class Outcome(enum.StrEnum):
@@ -55,6 +55,10 @@ class FetchResult:
     error: FetchError | None
     elapsed_ms: int
     attempts: int
+
+    def __post_init__(self) -> None:
+        if (self.html is None) == (self.error is None):
+            raise ValueError("a fetch result has exactly one of html and error")
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,26 +134,38 @@ class Record:
             "elapsed_ms": self.elapsed_ms,
             "attempts": self.attempts,
         }
-        return json.dumps(data, ensure_ascii=False)
+        line = json.dumps(data, ensure_ascii=False)
+        # json.dumps escapes \n but not these; str.splitlines() would split a record on them.
+        return line.translate(_LINE_BREAKS)
+
+
+_LINE_BREAKS = str.maketrans({"\u2028": "\\u2028", "\u2029": "\\u2029", "\x85": "\\u0085"})
+
+type QueuePolicy = Literal["drop-oldest", "block"]
 
 
 @dataclass(frozen=True, slots=True)
 class Settings:
+    """Run settings. The CLI's defaults are read from here, so they cannot disagree."""
+
     concurrency: int = 10
     consumers: int = 1
     queue_max: int = 100
-    queue_policy: str = "drop-oldest"
+    queue_policy: QueuePolicy = "drop-oldest"
     timeout: float = 10.0
     retries: int = 2
     max_bytes: int = 2_000_000
-    max_redirects: int = 9
+    max_redirects: int = 9  # library-only: not a CLI option
     per_host_delay: float = 0.0
     allow_private: bool = False
-    progress_interval: float = 5.0
+    progress_interval: float = 5.0  # library-only: not a CLI option; 0 turns it off
 
 
 @dataclass(frozen=True, slots=True)
 class Summary:
+    """End-of-run numbers. Each stage fills what only it knows: `Sink.close` the counts
+    and latencies, `Pipeline.run` the queue depth and duration, the CLI the duplicates."""
+
     jobs: int
     counts: Mapping[Outcome, int]
     retries: int

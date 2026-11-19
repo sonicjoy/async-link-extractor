@@ -132,6 +132,27 @@ async def test_empty_job_list_completes() -> None:
 # --- failure isolation -------------------------------------------------------------------
 
 
+async def test_an_output_failure_stops_all_further_writes() -> None:
+    class FailsOnce(io.StringIO):
+        failed = False
+        writes_after_failure = 0
+
+        def write(self, text: str) -> int:
+            if self.failed:
+                self.writes_after_failure += 1
+                return super().write(text)
+            self.failed = True
+            raise OSError("disk full")
+
+    jobs = make_jobs(50)
+    stream = FailsOnce()
+    settings = replace(SETTINGS, concurrency=8, queue_max=1, consumers=4)
+    pipeline = Pipeline(jobs, settings, Sink(stream, jobs), ScriptedFetcher())
+    with pytest.raises(BaseExceptionGroup):
+        await pipeline.run()
+    assert stream.writes_after_failure == 0
+
+
 async def test_fetch_errors_are_written_without_parsing() -> None:
     parsed: list[str] = []
 
@@ -219,6 +240,18 @@ async def test_interrupt_stops_fetching_and_drains_the_queue() -> None:
     assert [result[i]["outcome"] for i in range(6)] == ["ok"] * 4 + ["cancelled"] * 2
     assert summary.interrupted
     assert summary.counts[Outcome.CANCELLED] == 2
+
+
+async def test_first_interrupt_still_parses_every_queued_result() -> None:
+    # Jobs 0-4 are fetched at once and queue up behind a slow parser; 5 and 6 never finish.
+    # The interrupt lands while job 0 is being parsed and 1-4 are waiting in the queue.
+    settings = replace(SETTINGS, concurrency=7, queue_max=5, queue_policy="block")
+    pipeline, stream = build(7, ScriptedFetcher(hang={5, 6}), settings, parse=slow_parser(0.05))
+    asyncio.get_running_loop().call_later(0.01, pipeline.interrupt)
+    summary = await pipeline.run()
+    result = by_index(stream)
+    assert [result[i]["outcome"] for i in range(7)] == ["ok"] * 5 + ["cancelled"] * 2
+    assert summary.interrupted
 
 
 async def test_second_interrupt_stops_the_drain() -> None:

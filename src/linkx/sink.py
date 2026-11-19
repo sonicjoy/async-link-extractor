@@ -29,6 +29,7 @@ class Sink:
         self._counts: Counter[Outcome] = Counter()
         self._latencies: list[int] = []
         self._retries = 0
+        self._failed = False
 
     @property
     def emitted(self) -> int:
@@ -38,7 +39,14 @@ class Sink:
         return self._counts[outcome]
 
     def emit(self, record: Record) -> None:
-        """Write one record. A second record for the same job is a bug and raises."""
+        """Write one record. A second record for the same job is a bug and raises.
+
+        After a failed write every later call raises too: other tasks may still run in
+        the loop iteration before the TaskGroups cancel them, and they must not write
+        past a gap in the output.
+        """
+        if self._failed:
+            raise RuntimeError("output failed earlier; no further records are written")
         if record.index not in self._jobs:
             raise RuntimeError(f"record for unknown job {record.index}")
         if record.index in self._written:
@@ -49,8 +57,12 @@ class Sink:
             self._latencies.append(record.elapsed_ms)
         if record.attempts:
             self._retries += record.attempts - 1
-        self._stream.write(record.to_json() + "\n")
-        self._stream.flush()
+        try:
+            self._stream.write(record.to_json() + "\n")
+            self._stream.flush()
+        except BaseException:
+            self._failed = True
+            raise
 
     def close(self, *, interrupted: bool) -> Summary:
         """Close the audit: every job must have exactly one record.

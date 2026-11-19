@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from linkx.models import ErrorKind, FetchError, FetchResult, Job, Outcome, Record
 
 KEYS = [
@@ -137,3 +139,21 @@ def test_cancelled_record_has_only_identity() -> None:
 def test_non_ascii_is_written_as_utf8_text() -> None:
     record = Record.ok(fetched(), ["http://a.test/café"])
     assert "café" in record.to_json()
+
+
+def test_unicode_line_separators_are_escaped() -> None:
+    record = Record.ok(fetched(), ["http://a.test/a\u2028b\u2029c\x85d"])
+    line = record.to_json()
+    assert len(line.splitlines()) == 1
+    assert json.loads(line)["links"] == ["http://a.test/a\u2028b\u2029c\x85d"]
+
+
+@pytest.mark.parametrize(
+    ("html", "error"),
+    [(None, None), ("<p>", FetchError(ErrorKind.TIMEOUT, "late"))],
+)
+def test_fetch_result_has_exactly_one_of_html_and_error(
+    html: str | None, error: FetchError | None
+) -> None:
+    with pytest.raises(ValueError, match="exactly one"):
+        fetched(html=html, error=error)
