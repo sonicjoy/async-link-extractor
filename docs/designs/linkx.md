@@ -85,11 +85,11 @@ A **job** is one URL to fetch, a **result** is what a fetch produced and the que
 | Module | Responsibility |
 | --- | --- |
 | `models.py` | `Outcome`, `Job`, `FetchResult`, `Record`, `Summary`, `Settings` |
-| `fetch.py` | `Fetcher(client, settings, limiter, resolve, sleep, rng)`; `await fetcher.fetch(job) -> FetchResult`, which never raises `Exception` |
+| `fetch.py` | `Fetcher(client, settings, limiter, resolve, sleep, rng, clock)`; `await fetcher.fetch(job) -> FetchResult`, which never raises `Exception` |
 | `ratelimit.py` | `HostLimiter(delay, clock, sleep)` |
 | `overflow.py` | The overflow policies and `POLICIES`, a name-to-policy table |
 | `parse.py` | `extract_links(html, base_url) -> list[str]`. Pure function |
-| `sink.py` | `Sink(stream, total)`: `emit`, `close`. Synchronous |
+| `sink.py` | `Sink(stream, jobs)`: `emit`, `close`. Synchronous; it holds the jobs so `close` can write `cancelled` records |
 | `pipeline.py` | `Pipeline(jobs, settings, sink, fetcher, parse=extract_links)`: `await run()`, `interrupt()` |
 | `cli.py` | Arguments, input reading, signal handler, exit code |
 
