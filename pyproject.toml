@@ -59,4 +59,4 @@ ignore = ["PLR0913", "PLR2004"]
 [tool.mypy]
 strict = true
 python_version = "3.13"
-files = ["src", "tests"]
+files = ["src", "tests", "scripts"]
